@@ -191,5 +191,5 @@ if __name__ == "__main__":
     plt.axes().set_aspect('equal','box')
     plt.xlim(0, 6000)
     plt.ylim(0, 8000)
+    plt.savefig('via-fence-generator.png')
     plt.show()
-
