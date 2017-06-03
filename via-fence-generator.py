@@ -1,24 +1,18 @@
 #!/usr/bin/env python2
 
+
+import math
 import pyclipper
-import matplotlib.pyplot as plt
-import numpy as np
-
-from math import *
-
-def plotPath(path, **kwargs):
-    plt.plot(np.array(path).T[0], np.array(path).T[1], **kwargs)
-    plt.plot(path[0][0], path[0][1], '+')
-    plt.plot(path[-1][0], path[-1][1], 'x')
-
-def plotPoints(points, **kwargs):
-    plt.plot(np.array(points).T[0], np.array(points).T[1], 'o', **kwargs)
 
 # Uses the cross product to check if a point is on a line defined by two other points
 def isPointOnLine(point, line):
     cross = (line[1][1] - point[1]) * (line[0][0] - point[0]) - (line[1][0] - point[0]) * (line[0][1] - point[1])
-    if abs(cross) != 0: return False 
-    return True
+
+    if  (   ((line[0][0] <= point[0] <= line[1][0]) or (line[1][0] <= point[0] <= line[0][0]))
+        and ((line[0][1] <= point[1] <= line[1][1]) or (line[1][1] <= point[1] <= line[0][1]))
+        and (cross == 0) ):
+        return True
+    return False
 
 # Return a sub path from start index to end index using increasing indices only
 # When endIdx is smaller then startIdx, len(path) will be added causing traversing
@@ -38,7 +32,7 @@ def getPathCumDist(pathList):
     for vertex in pathList:
         # calculate distance to previous vertex using pythagoras
         # sum up the new distance to the previous distance and store into vector
-        distance = sqrt(pow(vertex[0] - previousVertex[0], 2) + pow(vertex[1] - previousVertex[1], 2))
+        distance = math.hypot(vertex[0] - previousVertex[0], vertex[1] - previousVertex[1])
         distanceSum += distance
         cumDist += [distanceSum]
         previousVertex = vertex
@@ -49,8 +43,8 @@ def getPathCumDist(pathList):
 # lines are within angleMin and angleMax in degrees
 # This could be used to find vertices with acute angles for example
 def getPathVertices(pathList, angleMin=0, angleMax=360):
-    angleMin = angleMin * pi / 180
-    angleMax = angleMax * pi / 180
+    angleMin = angleMin * math.pi / 180
+    angleMax = angleMax * math.pi / 180
     vertices = []
 
     # Look through all vertices except start and end vertex
@@ -62,10 +56,9 @@ def getPathVertices(pathList, angleMin=0, angleMax=360):
         ptB = [a-b for a,b in zip(pathList[vertexIdx+1], pathList[vertexIdx])]
 
         dot = ptA[0] * ptB[0] + ptA[1] * ptB[1]
-        lenA = hypot(ptA[0], ptA[1])
-        lenB = hypot(ptB[0], ptB[1])
-
-        angle = acos(dot/(lenA*lenB))
+        lenA = math.hypot(ptA[0], ptA[1])
+        lenB = math.hypot(ptB[0], ptB[1])
+        angle = math.acos(dot/(lenA*lenB))
 
         if (angle >= angleMin) and (angle < angleMax):
             vertices += [vertexIdx]
@@ -102,9 +95,17 @@ class PathInterpolator:
         # Return interpolated coordinates on the original path
         return [self.xInterp(t), self.yInterp(t)]
 
+# Distribute Points along a path with equal spacing to each other
+# When the path length is not evenly dividable by the minimumSpacing,
+# the actual spacing will be larger, but still smaller than 2*minimumSpacing
+# The function does not return the start and end vertex of the path
 def distributeAlongPath(path, minimumSpacing):
+    # Get cumulated distance vector for the path
+    # and determine the number of points that can fit to the path
+    # determine the final pitch by dividing the total path length
+    # by the rounded down number of points
     fenceDistances = getPathCumDist(path)
-    numberOfPoints = int(floor(fenceDistances[-1] / minimumSpacing))
+    numberOfPoints = int(math.floor(fenceDistances[-1] / minimumSpacing))
     pointInterpolator = PathInterpolator(fenceDistances, path)
     pointPitch = fenceDistances[-1] / numberOfPoints
     points = []
@@ -115,29 +116,34 @@ def distributeAlongPath(path, minimumSpacing):
     return points
 
 ######################
-
-
-def generateViaFence(track, viaOffset, viaPitch):
-
+def generateViaFence(tracks, viaOffset, viaPitch):
     # Use PyclipperOffset to generate a polygon that surrounds the original
     # path with a constant offset all around
     co = pyclipper.PyclipperOffset()
-    co.AddPath(track, pyclipper.JT_ROUND, pyclipper.ET_OPENBUTT)
+    for track in tracks:
+        co.AddPath(track, pyclipper.JT_ROUND, pyclipper.ET_OPENBUTT)
     offsetTrack = co.Execute(viaOffset)[0]
 
     # Since PyclipperOffset returns a closed path, we need to find
     # the butt lines in this closed path, i.e. the lines that are
     # perpendicular to the original track's start and end point
+    endVertices = []
     buttLineIdx = []
+
+    # First collect all the start and end vertices of all paths
+    # Then check if any of those vertices are located on any of
+    # the polygon vertices
+    for track in tracks: endVertices += [track[0]] + [track[-1]]
 
     for vertexIdx in range(0, len(offsetTrack)-1):
         # This is the current line segment
-        line = ( offsetTrack[vertexIdx], offsetTrack[vertexIdx+1] )
+        line = [ offsetTrack[vertexIdx], offsetTrack[vertexIdx+1] ]
 
-        # If start or end point of the original track are exactly colinear to the current
+        # If start or end point of the original track are located on the current
         # offseted line segment, we consider it a butt line and store the indices
-        if isPointOnLine(track[0], line) or isPointOnLine(track[-1], line):
-            buttLineIdx += [vertexIdx, vertexIdx+1]
+        for endVertex in endVertices:
+            if isPointOnLine(endVertex, line):
+                buttLineIdx += [vertexIdx, vertexIdx+1]
 
     # When using a single input path, only two butt lines should (tm) have been
     # found, since a single input path only has two end points
@@ -146,9 +152,10 @@ def generateViaFence(track, viaOffset, viaPitch):
     # For easier processing, we shift the found indices by one, so index[0]
     # directly corresponds to the start of the first path
     buttLineIdx = buttLineIdx[1:] + buttLineIdx[:1]
-    fencePaths = [  getSubPath(offsetTrack, buttLineIdx[0], buttLineIdx[1]),
-                    getSubPath(offsetTrack, buttLineIdx[2], buttLineIdx[3]) ]
+    fencePaths = []
 
+    for buttLineIdxIdx in range(0, len(buttLineIdx), 2):
+        fencePaths += [getSubPath(offsetTrack, buttLineIdx[buttLineIdxIdx], buttLineIdx[buttLineIdxIdx+1])]
 
     viaPoints = []
 
@@ -176,17 +183,34 @@ def generateViaFence(track, viaOffset, viaPitch):
 
 if __name__ == "__main__":
     # Set some via parameters
-    # generate a test path and run
+    # generate some test paths and run
     viaOffset = 500
     viaPitch = 300
 
-    track = ( (1000, 1000), (3000, 3000), (5000, 3000), (5000, 5000), (3000, 7000), (5000, 7000) )
+    tracks = [ [ [1000, 1000], [3000, 3000], [5000, 3000], [5000, 5000], [3000, 7000], [5000, 7000] ],
+                [ [3000, 3000], [2000, 5000], [1000, 5000] ] ]
 
-    viaPoints = generateViaFence(track, viaOffset, viaPitch)
+    viaPoints = generateViaFence(tracks, viaOffset, viaPitch)
+
+
+    # This is just for plotting stuff
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    def plotPaths(pathList, **kwargs):
+        for path in pathList:
+            plt.plot(np.array(path).T[0], np.array(path).T[1], **kwargs)
+            plt.plot(path[0][0], path[0][1], '+', **kwargs)
+            plt.plot(path[-1][0], path[-1][1], 'x', **kwargs)
+
+    def plotPoints(points, **kwargs):
+        plt.plot(np.array(points).T[0], np.array(points).T[1], 'o', **kwargs)
+
+
 
     # plot the result
-    plotPath(track)
-    plotPoints(viaPoints)
+    plotPaths(tracks, linewidth=5, markersize=10, markeredgewidth=2)
+    plotPoints(viaPoints, markersize=10)
 
     plt.axes().set_aspect('equal','box')
     plt.xlim(0, 6000)
