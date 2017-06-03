@@ -87,6 +87,21 @@ def getPathVertices(pathList, angleMin=0, angleMax=360):
 
     return vertices
 
+# Returns a list of paths touching any item in a list of points
+def getPathsTouchingPoints(path, pointList):
+    touchingPaths = []
+    for vertexIdx in range(0, len(path)-1):
+        # This is the current line segment to test
+        line = [ path[vertexIdx], path[vertexIdx+1] ]
+
+        # If a point in the pointList is located on this line, store the line
+        for point in pointList:
+            if isPointOnLine(point, line):
+                touchingPaths += [[vertexIdx, vertexIdx+1]]
+                break
+
+    return touchingPaths
+
 # A small linear interpolation class so we don't rely on scipy or numpy here
 from bisect import bisect_left
 class LinearInterpolator(object):
@@ -149,39 +164,34 @@ def generateViaFence(tracks, viaOffset, viaPitch):
     # Since PyclipperOffset returns a closed path, we need to find
     # the butt lines in this closed path, i.e. the lines that are
     # perpendicular to the original track's start and end point
-    endVertexList = []
+    leafVertexList = []
     buttLineIdxList = []
 
     # First collect all the start and end vertices of all input paths
     # Then check if any of those vertices are located on any of
     # the polygon line segments
-    for track in tracks: endVertexList += [track[0]] + [track[-1]]
+    # If this is the case, we consider them a butt line
+    for track in tracks: leafVertexList += [track[0]] + [track[-1]]
+    buttLineIdxList = getPathsTouchingPoints(offsetTrack, leafVertexList)
 
-    for vertexIdx in range(0, len(offsetTrack)-1):
-        # This is the current line segment
-        line = [ offsetTrack[vertexIdx], offsetTrack[vertexIdx+1] ]
-
-        # If start or end point of the original track are located on the current
-        # offseted line segment, we consider it a butt line and store the indices
-        for endVertex in endVertexList:
-            if isPointOnLine(endVertex, line):
-                buttLineIdxList += [[vertexIdx, vertexIdx+1]]
-
-    # The butt lines are then used to split up the offseted polygon into multiple
+    # The butt lines are used to split up the closed polygon into multiple
     # separate open paths to the left and the right of the original tracks
     fencePaths = splitPath(offsetTrack, buttLineIdxList)
     viaPoints = []
 
+    # With the now separated open paths we perform via placement on each one of them
     for fencePath in fencePaths:
-        # For a nice via fence placement, we try to find non-smooth kinks in the fence path
-        # and use these to place fixed vias that cannot be moved
-        # Also use start and end vertices of the fence path as fixed via locations
+        # For a nice via fence placement, we find vertices having an included angle
+        # satisfying a defined specification. This way non-smooth (i.e. non-arcs) are
+        # identified in the fence path. We use these to place fixed vias on their positions
+        # We also use start and end vertices of the fence path as fixed via locations
         fixPointIdxList = [0] + getPathVertices(fencePath, 0, 170) + [-1]
         fixViaPoints = [fencePath[idx] for idx in fixPointIdxList]
 
         viaPoints += fixViaPoints
 
-        # Generate subpaths from the fence path between the fixed via positions
+        # Then we autoplace vias between the fixed via locations by satisfying the
+        # minimum via pitch given by the user
         for subPath in splitPath(fencePath, fixPointIdxList):
             # Now equally space the vias along the subpath using the given minimum pitch
             # Add the generated vias to the list
