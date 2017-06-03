@@ -22,6 +22,29 @@ def getSubPath(pathList, startIdx, endIdx):
     if (endIdx < startIdx): endIdx += listModulus
     return [pathList[i % listModulus] for i in range(startIdx, endIdx+1)]
 
+# Split a path at specific indices
+def splitPath(path, splitIdxList):
+    if type(splitIdxList[0]) == int:
+        # We got a list of points for split operation
+        idxSkip = 1
+    elif type(splitIdxList[0]) == list:
+        # We got a list of lines for split operation
+        # Flatten the list and shift by one
+        splitIdxList = [item for sublist in splitIdxList for item in sublist]
+        splitIdxList = splitIdxList[1:] + splitIdxList[:1]
+        idxSkip = 2
+    else:
+        return []
+
+    # Generate subpaths by dividing the original path at split indices
+    subPaths = []
+    for splitIdxListIdx in range(0, len(splitIdxList)-1, idxSkip):
+        start = splitIdxList[splitIdxListIdx]
+        end = splitIdxList[splitIdxListIdx+1]
+        subPaths += [getSubPath(path, start, end)]
+
+    return subPaths
+
 # Return a cumulative distance vector representing the distance travelled along
 # the path at each path vertex
 def getPathCumDist(pathList):
@@ -32,8 +55,7 @@ def getPathCumDist(pathList):
     for vertex in pathList:
         # calculate distance to previous vertex using pythagoras
         # sum up the new distance to the previous distance and store into vector
-        distance = math.hypot(vertex[0] - previousVertex[0], vertex[1] - previousVertex[1])
-        distanceSum += distance
+        distanceSum += math.hypot(vertex[0] - previousVertex[0], vertex[1] - previousVertex[1])
         cumDist += [distanceSum]
         previousVertex = vertex
 
@@ -118,7 +140,7 @@ def distributeAlongPath(path, minimumSpacing):
 ######################
 def generateViaFence(tracks, viaOffset, viaPitch):
     # Use PyclipperOffset to generate a polygon that surrounds the original
-    # path with a constant offset all around
+    # paths with a constant offset all around
     co = pyclipper.PyclipperOffset()
     for track in tracks:
         co.AddPath(track, pyclipper.JT_ROUND, pyclipper.ET_OPENBUTT)
@@ -127,13 +149,13 @@ def generateViaFence(tracks, viaOffset, viaPitch):
     # Since PyclipperOffset returns a closed path, we need to find
     # the butt lines in this closed path, i.e. the lines that are
     # perpendicular to the original track's start and end point
-    endVertices = []
-    buttLineIdx = []
+    endVertexList = []
+    buttLineIdxList = []
 
-    # First collect all the start and end vertices of all paths
+    # First collect all the start and end vertices of all input paths
     # Then check if any of those vertices are located on any of
-    # the polygon vertices
-    for track in tracks: endVertices += [track[0]] + [track[-1]]
+    # the polygon line segments
+    for track in tracks: endVertexList += [track[0]] + [track[-1]]
 
     for vertexIdx in range(0, len(offsetTrack)-1):
         # This is the current line segment
@@ -141,22 +163,13 @@ def generateViaFence(tracks, viaOffset, viaPitch):
 
         # If start or end point of the original track are located on the current
         # offseted line segment, we consider it a butt line and store the indices
-        for endVertex in endVertices:
+        for endVertex in endVertexList:
             if isPointOnLine(endVertex, line):
-                buttLineIdx += [vertexIdx, vertexIdx+1]
+                buttLineIdxList += [[vertexIdx, vertexIdx+1]]
 
-    # When using a single input path, only two butt lines should (tm) have been
-    # found, since a single input path only has two end points
-    # The butt lines are then used to split up the offseted polygon into two
-    # separate open paths to the left and the right of the original track
-    # For easier processing, we shift the found indices by one, so index[0]
-    # directly corresponds to the start of the first path
-    buttLineIdx = buttLineIdx[1:] + buttLineIdx[:1]
-    fencePaths = []
-
-    for buttLineIdxIdx in range(0, len(buttLineIdx), 2):
-        fencePaths += [getSubPath(offsetTrack, buttLineIdx[buttLineIdxIdx], buttLineIdx[buttLineIdxIdx+1])]
-
+    # The butt lines are then used to split up the offseted polygon into multiple
+    # separate open paths to the left and the right of the original tracks
+    fencePaths = splitPath(offsetTrack, buttLineIdxList)
     viaPoints = []
 
     for fencePath in fencePaths:
@@ -168,16 +181,11 @@ def generateViaFence(tracks, viaOffset, viaPitch):
 
         viaPoints += fixViaPoints
 
-        for fixPointIdxIdx in range(0, len(fixPointIdxList)-1):
-            # Generate subpaths from the fence path between the fixed via positions
-            fixPointIdxStart = fixPointIdxList[fixPointIdxIdx]
-            fixPointIdxEnd = fixPointIdxList[fixPointIdxIdx+1]
-            subPath = getSubPath(fencePath, fixPointIdxStart, fixPointIdxEnd)
-
+        # Generate subpaths from the fence path between the fixed via positions
+        for subPath in splitPath(fencePath, fixPointIdxList):
             # Now equally space the vias along the subpath using the given minimum pitch
             # Add the generated vias to the list
-            generatedViaPoints = distributeAlongPath(subPath, viaPitch)
-            viaPoints += generatedViaPoints
+            viaPoints += distributeAlongPath(subPath, viaPitch)
 
     return viaPoints
 
