@@ -1,26 +1,15 @@
 #!/usr/bin/env python2
-
-
 import math
 import pyclipper
-
-# Uses the cross product to check if a point is on a line defined by two other points
-def isPointOnLine(point, line):
-    cross = (line[1][1] - point[1]) * (line[0][0] - point[0]) - (line[1][0] - point[0]) * (line[0][1] - point[1])
-
-    if  (   ((line[0][0] <= point[0] <= line[1][0]) or (line[1][0] <= point[0] <= line[0][0]))
-        and ((line[0][1] <= point[1] <= line[1][1]) or (line[1][1] <= point[1] <= line[0][1]))
-        and (cross == 0) ):
-        return True
-    return False
+from bisect import bisect_left
 
 # Return a sub path from start index to end index using increasing indices only
 # When endIdx is smaller then startIdx, len(path) will be added causing traversing
-# a full round trip in the list instead of reversing it (python list default)
-def getSubPath(pathList, startIdx, endIdx):
-    listModulus = len(pathList)
+# a round trip in the list instead of reversing it (python list default)
+def getSubPath(path, startIdx, endIdx):
+    listModulus = len(path)
     if (endIdx < startIdx): endIdx += listModulus
-    return [pathList[i % listModulus] for i in range(startIdx, endIdx+1)]
+    return [path[i % listModulus] for i in range(startIdx, endIdx+1)]
 
 # Split a path at specific indices
 def splitPath(path, splitIdxList):
@@ -87,6 +76,16 @@ def getPathVertices(pathList, angleMin=0, angleMax=360):
 
     return vertices
 
+# Uses the cross product to check if a point is on a line defined by two other points
+def isPointOnLine(point, line):
+    cross = (line[1][1] - point[1]) * (line[0][0] - point[0]) - (line[1][0] - point[0]) * (line[0][1] - point[1])
+
+    if  (   ((line[0][0] <= point[0] <= line[1][0]) or (line[1][0] <= point[0] <= line[0][0]))
+        and ((line[0][1] <= point[1] <= line[1][1]) or (line[1][1] <= point[1] <= line[0][1]))
+        and (cross == 0) ):
+        return True
+    return False
+
 # Returns a list of paths touching any item in a list of points
 def getPathsTouchingPoints(path, pointList):
     touchingPaths = []
@@ -103,7 +102,6 @@ def getPathsTouchingPoints(path, pointList):
     return touchingPaths
 
 # A small linear interpolation class so we don't rely on scipy or numpy here
-from bisect import bisect_left
 class LinearInterpolator(object):
     def __init__(self, x_list, y_list):
         x_list = self.x_list = map(float, x_list)
