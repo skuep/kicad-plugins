@@ -104,8 +104,8 @@ def getPathsTouchingPoints(path, pointList):
 # A small linear interpolation class so we don't rely on scipy or numpy here
 class LinearInterpolator(object):
     def __init__(self, x_list, y_list):
-        x_list = self.x_list = map(float, x_list)
-        y_list = self.y_list = map(float, y_list)
+        x_list = self.x_list = list(map(float, x_list))
+        y_list = self.y_list = list(map(float, y_list))
         intervals = zip(x_list, x_list[1:], y_list, y_list[1:])
         self.slopes = [(y2 - y1)/(x2 - x1) for x1, x2, y1, y2 in intervals]
     def __call__(self, x):
