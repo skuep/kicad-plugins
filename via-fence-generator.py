@@ -24,6 +24,7 @@ def getSubPath(pathList, startIdx, endIdx):
 
 # Split a path at specific indices
 def splitPath(path, splitIdxList):
+    # Test splitIdxList wheter we use points or lines to split the path
     if type(splitIdxList[0]) == int:
         # We got a list of points for split operation
         idxSkip = 1
@@ -33,8 +34,6 @@ def splitPath(path, splitIdxList):
         splitIdxList = [item for sublist in splitIdxList for item in sublist]
         splitIdxList = splitIdxList[1:] + splitIdxList[:1]
         idxSkip = 2
-    else:
-        return []
 
     # Generate subpaths by dividing the original path at split indices
     subPaths = []
@@ -47,12 +46,12 @@ def splitPath(path, splitIdxList):
 
 # Return a cumulative distance vector representing the distance travelled along
 # the path at each path vertex
-def getPathCumDist(pathList):
-    previousVertex = pathList[0]
+def getPathCumDist(path):
+    previousVertex = path[0]
     cumDist = []
     distanceSum = 0.0
 
-    for vertex in pathList:
+    for vertex in path:
         # calculate distance to previous vertex using pythagoras
         # sum up the new distance to the previous distance and store into vector
         distanceSum += math.hypot(vertex[0] - previousVertex[0], vertex[1] - previousVertex[1])
@@ -73,7 +72,8 @@ def getPathVertices(pathList, angleMin=0, angleMax=360):
     # Find the angle of the connecting lines of the vertex
     # And if it is satisfying the angle specification, store it
     for vertexIdx in range(1, len(pathList)-1):
-        # Make two root vectors
+        # Reduce three points to two position vectors (points)
+        # Calculate dot product and line lengths and use them to calculate the angle
         ptA = [a-b for a,b in zip(pathList[vertexIdx-1], pathList[vertexIdx])]
         ptB = [a-b for a,b in zip(pathList[vertexIdx+1], pathList[vertexIdx])]
 
@@ -106,13 +106,10 @@ def getPathsTouchingPoints(path, pointList):
 from bisect import bisect_left
 class LinearInterpolator(object):
     def __init__(self, x_list, y_list):
-        if any(y - x <= 0 for x, y in zip(x_list, x_list[1:])):
-            raise ValueError("x_list must be in strictly ascending order!")
         x_list = self.x_list = map(float, x_list)
         y_list = self.y_list = map(float, y_list)
         intervals = zip(x_list, x_list[1:], y_list, y_list[1:])
         self.slopes = [(y2 - y1)/(x2 - x1) for x1, x2, y1, y2 in intervals]
-
     def __call__(self, x):
         i = bisect_left(self.x_list, x) - 1
         return self.y_list[i] + self.slopes[i] * (x - self.x_list[i])
@@ -121,13 +118,11 @@ class LinearInterpolator(object):
 class PathInterpolator:
     def __init__(self, t, path):
         # Quick and dirty transpose path so we get two list with x and y coords
+        # And set up two separate interpolators for them
         x = [vertex[0] for vertex in path]
         y = [vertex[1] for vertex in path]
-
-        # Set up two separate interpolators
         self.xInterp = LinearInterpolator(t, x)
         self.yInterp = LinearInterpolator(t, y)
-
     def __call__(self, t):
         # Return interpolated coordinates on the original path
         return [self.xInterp(t), self.yInterp(t)]
@@ -157,21 +152,17 @@ def generateViaFence(tracks, viaOffset, viaPitch):
     # Use PyclipperOffset to generate a polygon that surrounds the original
     # paths with a constant offset all around
     co = pyclipper.PyclipperOffset()
-    for track in tracks:
-        co.AddPath(track, pyclipper.JT_ROUND, pyclipper.ET_OPENBUTT)
+    co.AddPaths(tracks, pyclipper.JT_ROUND, pyclipper.ET_OPENBUTT)
     offsetTrack = co.Execute(viaOffset)[0]
 
     # Since PyclipperOffset returns a closed path, we need to find
     # the butt lines in this closed path, i.e. the lines that are
-    # perpendicular to the original track's start and end point
-    leafVertexList = []
-    buttLineIdxList = []
-
+    # perpendicular to the original tracks' start and end points
     # First collect all the start and end vertices of all input paths
     # Then check if any of those vertices are located on any of
     # the polygon line segments
     # If this is the case, we consider them a butt line
-    for track in tracks: leafVertexList += [track[0]] + [track[-1]]
+    leafVertexList = [track[idx] for idx in [0, -1] for track in tracks]
     buttLineIdxList = getPathsTouchingPoints(offsetTrack, leafVertexList)
 
     # The butt lines are used to split up the closed polygon into multiple
