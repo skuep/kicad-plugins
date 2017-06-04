@@ -175,9 +175,7 @@ def generateViaFence(tracks, viaOffset, viaPitch):
         # identified in the fence path. We use these to place fixed vias on their positions
         # We also use start and end vertices of the fence path as fixed via locations
         fixPointIdxList = [0] + getPathVertices(fencePath, 0, 170) + [-1]
-        fixViaPoints = [fencePath[idx] for idx in fixPointIdxList]
-
-        viaPoints += fixViaPoints
+        viaPoints += [fencePath[idx] for idx in fixPointIdxList]
 
         # Then we autoplace vias between the fixed via locations by satisfying the
         # minimum via pitch given by the user
