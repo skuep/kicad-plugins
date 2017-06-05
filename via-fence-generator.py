@@ -126,6 +126,22 @@ def clipPolygonWithPolygons(path, clipPathList):
     pc.AddPaths(clipPathList, pyclipper.PT_CLIP, True)
     return pc.Execute(pyclipper.CT_DIFFERENCE)
 
+def isPointInPolygon(point, path):
+    return True if (pyclipper.PointInPolygon(point, path) == 1) else False
+
+def getPathsInsidePolygon(pathList, polygon):
+    filteredPathList = []
+
+    for path in pathList:
+        allVerticesInside = True
+        for vertex in path:
+            if not isPointInPolygon(vertex, polygon):
+                allVerticesInside = False
+                break
+        if (allVerticesInside): filteredPathList += [path]
+
+    return filteredPathList
+
 # Distribute Points along a path with equal spacing to each other
 # When the path length is not evenly dividable by the minimumSpacing,
 # the actual spacing will be larger, but still smaller than 2*minimumSpacing
@@ -178,14 +194,15 @@ def generateViaFence(pathList, viaOffset, viaPitch):
     # Expand the paths given as a parameter into one or more polygons
     # using the offset parameter
     offsetPaths = expandPathsToPolygons(pathList, viaOffset)
-
     for offsetPath in offsetPaths:
+        # Filter the input path to only include paths inside this polygon
         # Find all leaf vertices and use them to trim the expanded polygon
         # around the leaf vertices so that we get a flush, flat end
         # These butt lines are then found using the leaf vertices
         # and used to split open the polygon into multiple separate open
         # paths that envelop the original path
-        leafVertexList, leafVertexAngles = getLeafVertices(pathList)
+        localPathList = getPathsInsidePolygon(pathList, offsetPath)
+        leafVertexList, leafVertexAngles = getLeafVertices(localPathList)
         offsetPath = trimFlushPolygonAtVertices(offsetPath, leafVertexList, leafVertexAngles, 1.5*viaOffset)[0]
         buttLineIdxList = getPathsThroughPoints(offsetPath, leafVertexList)
         fencePaths = splitPathByPaths(offsetPath, buttLineIdxList)
