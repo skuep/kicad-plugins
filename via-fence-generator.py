@@ -193,19 +193,18 @@ def generateViaFence(pathList, viaOffset, viaPitch):
 
     # Expand the paths given as a parameter into one or more polygons
     # using the offset parameter
-    offsetPaths = expandPathsToPolygons(pathList, viaOffset)
-    for offsetPath in offsetPaths:
+    for offsetPoly in expandPathsToPolygons(pathList, viaOffset):
         # Filter the input path to only include paths inside this polygon
         # Find all leaf vertices and use them to trim the expanded polygon
         # around the leaf vertices so that we get a flush, flat end
         # These butt lines are then found using the leaf vertices
         # and used to split open the polygon into multiple separate open
         # paths that envelop the original path
-        localPathList = getPathsInsidePolygon(pathList, offsetPath)
+        localPathList = getPathsInsidePolygon(pathList, offsetPoly)
         leafVertexList, leafVertexAngles = getLeafVertices(localPathList)
-        offsetPath = trimFlushPolygonAtVertices(offsetPath, leafVertexList, leafVertexAngles, 1.5*viaOffset)[0]
-        buttLineIdxList = getPathsThroughPoints(offsetPath, leafVertexList)
-        fencePaths = splitPathByPaths(offsetPath, buttLineIdxList)
+        offsetPoly = trimFlushPolygonAtVertices(offsetPoly, leafVertexList, leafVertexAngles, 1.5*viaOffset)[0]
+        buttLineIdxList = getPathsThroughPoints(offsetPoly, leafVertexList)
+        fencePaths = splitPathByPaths(offsetPoly, buttLineIdxList)
 
         # With the now separated open paths we perform via placement on each one of them
         for fencePath in fencePaths:
