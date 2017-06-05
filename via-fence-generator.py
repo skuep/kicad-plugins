@@ -154,6 +154,13 @@ def transformVertices(vertexList, offset, angle):
                offset[1] + math.sin(angle) * vertex[0] + math.cos(angle) * vertex[1] ]
            for vertex in vertexList]
 
+def trimFlushPolygonAtVertices(path, vertexList, vertexSlopes, extent):
+    trimRect = [ [0, -extent], [0, 0], [0, extent], [-extent, extent], [-extent, -extent] ]
+    trimPolys = [transformVertices(trimRect, vertexPos, vertexSlope)
+        for vertexPos, vertexSlope in zip(vertexList, vertexSlopes)]
+    return clipPolygonWithPolygons(path, trimPolys)
+
+
 ######################
 import matplotlib.pyplot as plt
 import numpy as np
@@ -165,74 +172,42 @@ def generateViaFence(pathList, viaOffset, viaPitch):
 
 # TODO: multiple paths
 
-    # Find all leaf vertices 
+    # Find all leaf vertices and use them to trim the expanded polygon
+    # around the leaf vertices so that we get a flush, flat end
+    # These butt lines are then found using the leaf vertices
+    # and used to split open the polygon into multiple separate open
+    # paths that envelop the original path
     leafVertexList, leafVertexAngles = getLeafVertices(pathList)
-
-    for idx in range(0, len(leafVertexList)):
-        plt.text(leafVertexList[idx][0], leafVertexList[idx][1], leafVertexAngles[idx])
-
-
-    cutRect = [ [0, -1.5*viaOffset], [0, 0], [0, 1.5*viaOffset], [-1.5*viaOffset, 1.5*viaOffset], [-1.5*viaOffset, -1.5*viaOffset] ]
-
-    cutRects = []
-    for vertexPos, vertexAngle in zip(leafVertexList, leafVertexAngles):
-        newRect = transformVertices(cutRect, vertexPos, vertexAngle)
-        cutRects += [newRect]
-#        plt.plot(np.array(newRect).T[0], np.array(newRect).T[1])
-
-    offsetPath = clipPolygonWithPolygons(offsetPath, cutRects)[0]
-
- #   plt.plot(np.array(offsetTrack).T[0], np.array(offsetTrack).T[1])
-
-
+    offsetPath = trimFlushPolygonAtVertices(offsetPath, leafVertexList, leafVertexAngles, 1.5*viaOffset)[0]
     buttLineIdxList = getPathsThroughPoints(offsetPath, leafVertexList)
-#    print(buttLineIdxList)
-    for buttLineIdx in buttLineIdxList:
-        buttLine = [ offsetPath[buttLineIdx[0]], offsetPath[buttLineIdx[1]] ]
-#        plt.plot(np.array(buttLine).T[0], np.array(buttLine).T[1])
-#        plt.plot(buttLine[0][0], buttLine[0][1], '+', markersize=10)
-#        plt.plot(buttLine[1][0], buttLine[1][1], 'x', markersize=10)
-
-    # The butt lines are used to split up the closed polygon into multiple
-    # separate open paths to the left and the right of the original tracks
     fencePaths = splitPathByPaths(offsetPath, buttLineIdxList)
+
     viaPoints = []
-
-    for path in fencePaths:
-        pass
-#        plt.plot(np.array(path).T[0], np.array(path).T[1])
-#        plt.plot(path[0][0], path[0][1], '+', markersize=10, markeredgewidth=2)
-#        plt.plot(path[-1][0], path[-1][1], 'x', markersize=10, markeredgewidth=2)
-
 
     # With the now separated open paths we perform via placement on each one of them
     for fencePath in fencePaths:
-        # For a nice via fence placement, we find vertices having an included angle
-        # satisfying a defined specification. This way non-smooth (i.e. non-arcs) are
-        # identified in the fence path. We use these to place fixed vias on their positions
-        # We also use start and end vertices of the fence path as fixed via locations
+        # For a nice via fence placement, we identify vertices that differ from a straight
+        # line by more than 10 degrees so we find all non-arc edges
+        # We combine these points with the start and end point of the path and use
+        # them to place fixed vias on their positions
         fixPointIdxList = [0] + getPathVertices(fencePath, 10) + [-1]
         viaPoints += [fencePath[idx] for idx in fixPointIdxList]
 
-#        continue
         # Then we autoplace vias between the fixed via locations by satisfying the
         # minimum via pitch given by the user
         for subPath in splitPathByPoints(fencePath, fixPointIdxList):
-            # Now equally space the vias along the subpath using the given minimum pitch
-            # Add the generated vias to the list
             viaPoints += distributeAlongPath(subPath, viaPitch)
-            plt.plot(np.array(subPath).T[0], np.array(subPath).T[1])
-            pass
 
     return viaPoints
 
 
 
 if __name__ == "__main__":
+    import json
+
     # Load test dataset
     datasetFile = 'via-fence-generator-test.json'
 
-    import json
     with open(datasetFile, 'rb') as file:
         dict = json.load(file)
     viaOffset = dict['viaOffset']
@@ -270,17 +245,14 @@ class ViaFenceGenerator(pcbnew.ActionPlugin):
 
     def Run(self):
         pcbObj = pcbnew.GetBoard()
-
-        netName = 'Net-(U1-Pad2)'
         viaOffset = pcbnew.FromMM(0.5)
         viaPitch =  pcbnew.FromMM(1)
-
-#        netId = pcbObj.FindNet(netName).GetNet()
         netId = pcbObj.GetHighLightNetCode()
 
         if (netId != -1):
+            # Get tracks in currently selected net and convert them to a list of list
+            # Then run the via fence generator
             netTracks = pcbObj.TracksInNet(netId)
-
             trackList = [ [[t.GetStart()[0], t.GetStart()[1]], [t.GetEnd()[0], t.GetEnd()[1]]] for t in netTracks ]
             viaPoints = generateViaFence(trackList, viaOffset, viaPitch)
 
