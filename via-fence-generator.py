@@ -1,77 +1,64 @@
 #!/usr/bin/env python2
+import pcbnew
 import math
 import pyclipper
+import collections
 from bisect import bisect_left
+from itertools import cycle
 
-# Return a sub path from start index to end index using increasing indices only
-# When endIdx is smaller then startIdx, len(path) will be added causing traversing
-# a round trip in the list instead of reversing it (python list default)
-def getSubPath(path, startIdx, endIdx):
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+
+def getLineSlope(line):
+    return math.atan2(line[0][1]-line[1][1], line[0][0]-line[1][0])
+
+def getLineLength(line):
+    return math.hypot(line[0][0]-line[1][0], line[0][1]-line[1][1])
+
+def getSubPath(path, pathSpec):
     listModulus = len(path)
-    if (endIdx < startIdx): endIdx += listModulus
-    return [path[i % listModulus] for i in range(startIdx, endIdx+1)]
+    if (pathSpec[1] < pathSpec[0]): pathSpec[1] += listModulus
+    return [path[i % listModulus] for i in range(pathSpec[0], pathSpec[1]+1)]
 
-# Split a path at specific indices
-def splitPath(path, splitIdxList):
-    # Test splitIdxList wheter we use points or lines to split the path
-    if type(splitIdxList[0]) == int:
-        # We got a list of points for split operation
-        idxSkip = 1
-    elif type(splitIdxList[0]) == list:
-        # We got a list of lines for split operation
-        # Flatten the list and shift by one
-        splitIdxList = [item for sublist in splitIdxList for item in sublist]
-        splitIdxList = splitIdxList[1:] + splitIdxList[:1]
-        idxSkip = 2
+def getSubPaths(path, pathSpecList):
+    return [getSubPath(path, pathSpec) for pathSpec in pathSpecList if (pathSpec[0] != pathSpec[1])]
 
-    # Generate subpaths by dividing the original path at split indices
-    subPaths = []
-    for splitIdxListIdx in range(0, len(splitIdxList)-1, idxSkip):
-        start = splitIdxList[splitIdxListIdx]
-        end = splitIdxList[splitIdxListIdx+1]
-        subPaths += [getSubPath(path, start, end)]
+def splitPathByPoints(path, splitList):
+    pathSpecList = [[splitList[item], splitList[item+1]] for item in range(0, len(splitList)-1)]
+    return getSubPaths(path, pathSpecList)
 
-    return subPaths
+def splitPathByPaths(path, splitList):
+    pathSpecList = [[splitList[item][-1], splitList[(item+1)%len(splitList)][0]] for item in range(0, len(splitList))]
+    return getSubPaths(path, pathSpecList)
 
 # Return a cumulative distance vector representing the distance travelled along
 # the path at each path vertex
 def getPathCumDist(path):
-    previousVertex = path[0]
-    cumDist = []
-    distanceSum = 0.0
-
-    for vertex in path:
-        # calculate distance to previous vertex using pythagoras
-        # sum up the new distance to the previous distance and store into vector
-        distanceSum += math.hypot(vertex[0] - previousVertex[0], vertex[1] - previousVertex[1])
-        cumDist += [distanceSum]
-        previousVertex = vertex
+    cumDist = [0.0]
+    for vertexId in range(1, len(path)):
+        cumDist += [cumDist[-1] + getLineLength([path[vertexId], path[vertexId-1]])]
 
     return cumDist
 
-# Return a list of all vertex indices whose angle between connecting
-# lines are within angleMin and angleMax in degrees
-# This could be used to find vertices with acute angles for example
-def getPathVertices(pathList, angleMin=0, angleMax=360):
-    angleMin = angleMin * math.pi / 180
-    angleMax = angleMax * math.pi / 180
+# Return a list of all vertex indices where the angle between
+# the two lines connected to the vertex deviate from a straight
+# path more by the tolerance angle in degrees
+# This function is used to find bends that are larger than a certain angle
+def getPathVertices(pathList, angleTolerance):
+    angleTolerance = angleTolerance * math.pi / 180
     vertices = []
 
     # Look through all vertices except start and end vertex
-    # Find the angle of the connecting lines of the vertex
-    # And if it is satisfying the angle specification, store it
+    # Calculate by how much the lines before and after the vertex
+    # deviate from a straight path.
+    # If the deviation angle exceeds the specification, store it
     for vertexIdx in range(1, len(pathList)-1):
-        # Reduce three points to two position vectors (points)
-        # Calculate dot product and line lengths and use them to calculate the angle
-        ptA = [a-b for a,b in zip(pathList[vertexIdx-1], pathList[vertexIdx])]
-        ptB = [a-b for a,b in zip(pathList[vertexIdx+1], pathList[vertexIdx])]
-
-        dot = ptA[0] * ptB[0] + ptA[1] * ptB[1]
-        lenA = math.hypot(ptA[0], ptA[1])
-        lenB = math.hypot(ptB[0], ptB[1])
-        angle = math.acos(dot/(lenA*lenB))
-
-        if (angle >= angleMin) and (angle < angleMax):
+        prevSlope = getLineSlope([pathList[vertexIdx+1], pathList[vertexIdx]])
+        nextSlope = getLineSlope([pathList[vertexIdx-1], pathList[vertexIdx]])
+        deviationAngle = abs(prevSlope - nextSlope) - math.pi
+        if (abs(deviationAngle) > angleTolerance):
             vertices += [vertexIdx]
 
     return vertices
@@ -86,9 +73,10 @@ def isPointOnLine(point, line):
         return True
     return False
 
-# Returns a list of paths touching any item in a list of points
-def getPathsTouchingPoints(path, pointList):
+# Returns a list of path indices touching any item in a list of points
+def getPathsThroughPoints(path, pointList):
     touchingPaths = []
+
     for vertexIdx in range(0, len(path)-1):
         # This is the current line segment to test
         line = [ path[vertexIdx], path[vertexIdx+1] ]
@@ -124,6 +112,13 @@ class PathInterpolator:
         # Return interpolated coordinates on the original path
         return [self.xInterp(t), self.yInterp(t)]
 
+def expandPathsToPolygons(pathList, offset):
+    # Use PyclipperOffset to generate polygons that surround the original
+    # paths with a constant offset all around
+    co = pyclipper.PyclipperOffset()
+    co.AddPaths(pathList, pyclipper.JT_ROUND, pyclipper.ET_OPENROUND)
+    return co.Execute(offset)
+
 # Distribute Points along a path with equal spacing to each other
 # When the path length is not evenly dividable by the minimumSpacing,
 # the actual spacing will be larger, but still smaller than 2*minimumSpacing
@@ -133,24 +128,53 @@ def distributeAlongPath(path, minimumSpacing):
     # and determine the number of points that can fit to the path
     # determine the final pitch by dividing the total path length
     # by the rounded down number of points
-    fenceDistances = getPathCumDist(path)
-    numberOfPoints = int(math.floor(fenceDistances[-1] / minimumSpacing))
-    pointInterpolator = PathInterpolator(fenceDistances, path)
-    pointPitch = fenceDistances[-1] / numberOfPoints
-    points = []
+    distList = getPathCumDist(path)
+    nPoints = int(math.floor(distList[-1] / minimumSpacing))
+    ptInterp = PathInterpolator(distList, path)
+    return [ptInterp(ptIdx * distList[-1]/nPoints) for ptIdx in range(1, nPoints)]
 
-    for pointIdx in range(1, numberOfPoints):
-        points += [pointInterpolator(pointIdx*pointPitch)]
+def getLeafVertices(tracks):
+    leafVertices = []
+    leafVertexNeighbours = []
+    leafVertexAngles = []
 
-    return points
+    for trackA in tracks:
+        for vertexIdxA in [0,-1]:
+            vertexA = trackA[vertexIdxA]
+            vertexOccurences = 0
+            for trackB in tracks:
+                for vertexB in trackB:
+                    if (vertexA[0] == vertexB[0]) and (vertexA[1] == vertexB[1]):
+                        vertexOccurences += 1
+            if (vertexOccurences == 1):
+                # vertex appears only once in total
+                leafVertices += [vertexA]
+                # Get neighbour vertex
+                if (vertexIdxA == 0): neighbourVertex = trackA[1]
+                elif (vertexIdxA == -1): neighbourVertex = trackA[-2]
+                leafVertexAngles += [getLineSlope([neighbourVertex, vertexA])]
+
+    return leafVertices, leafVertexAngles
+
+def transformVertices(vertexList, offset, angle):
+    newVertexList = []
+    for vertex in vertexList:
+        newVertexList += [[ offset[0] + math.cos(angle) * vertex[0] - math.sin(angle) * vertex[1],
+                            offset[1] + math.sin(angle) * vertex[0] + math.cos(angle) * vertex[1] ]]
+    return newVertexList
 
 ######################
-def generateViaFence(tracks, viaOffset, viaPitch):
-    # Use PyclipperOffset to generate a polygon that surrounds the original
-    # paths with a constant offset all around
-    co = pyclipper.PyclipperOffset()
-    co.AddPaths(tracks, pyclipper.JT_ROUND, pyclipper.ET_OPENBUTT)
-    offsetTrack = co.Execute(viaOffset)[0]
+def generateViaFence(pathList, viaOffset, viaPitch):
+    offsetTrack = expandPathsToPolygons(pathList, viaOffset)[0]
+
+
+# TODO: multiple paths
+
+#    pc1 = pyclipper.Pyclipper()
+#    test = pc1.AddPaths(tracks, pyclipper.PT_SUBJECT, False)
+#    bla = pc1.Execute2(pyclipper.CT_UNION)
+
+#    tracks=(pyclipper.OpenPathsFromPolyTree(bla))
 
     # Since PyclipperOffset returns a closed path, we need to find
     # the butt lines in this closed path, i.e. the lines that are
@@ -159,13 +183,58 @@ def generateViaFence(tracks, viaOffset, viaPitch):
     # Then check if any of those vertices are located on any of
     # the polygon line segments
     # If this is the case, we consider them a butt line
-    leafVertexList = [track[idx] for idx in [0, -1] for track in tracks]
-    buttLineIdxList = getPathsTouchingPoints(offsetTrack, leafVertexList)
+    leafVertexList, leafVertexAngles = getLeafVertices(pathList)
+
+#    allVertices = [track for subTracks in tracks for track in subTracks]
+#    startEndVertexList = [track[idx] for idx in [0, -1] for track in tracks]
+#    leafVertexList = getVerticesUniqueIn(startEndVertexList, allVertices) # leafVertices are unique
+
+    # how to get the slope of leafVertex?
+    # Maybe make class Vertex inherit from namedtuple with x,y,prev,next,unique?
+    # let getVerticesUniqueIn return lines?
+    # how to find the point connected to leavVertex? search for it?
+    # Can we get indexes from getVerticesUniqueIn? has to be hierachical: LineIdx, pointIdx
+    # Rotate the cutRect to match the end style thing
+    # pyclipper.clip(not) it
+    for idx in range(0, len(leafVertexList)):
+        plt.text(leafVertexList[idx][0], leafVertexList[idx][1], leafVertexAngles[idx])
+
+
+    cutRect = [ [0, -1.5*viaOffset], [0, 0], [0, 1.5*viaOffset], [-1.5*viaOffset, 1.5*viaOffset], [-1.5*viaOffset, -1.5*viaOffset] ]
+
+    cutRects = []
+    for vertexPos, vertexAngle in zip(leafVertexList, leafVertexAngles):
+        newRect = transformVertices(cutRect, vertexPos, vertexAngle)
+        cutRects += [newRect]
+#        plt.plot(np.array(newRect).T[0], np.array(newRect).T[1])
+
+    pc = pyclipper.Pyclipper()
+    pc.AddPath(offsetTrack, pyclipper.PT_SUBJECT, True)
+    pc.AddPaths(cutRects, pyclipper.PT_CLIP, True)
+    offsetTrack = pc.Execute(pyclipper.CT_DIFFERENCE)[0]
+
+ #   plt.plot(np.array(offsetTrack).T[0], np.array(offsetTrack).T[1])
+
+
+    buttLineIdxList = getPathsThroughPoints(offsetTrack, leafVertexList)
+    print(buttLineIdxList)
+    for buttLineIdx in buttLineIdxList:
+        buttLine = [ offsetTrack[buttLineIdx[0]], offsetTrack[buttLineIdx[1]] ]
+#        plt.plot(np.array(buttLine).T[0], np.array(buttLine).T[1])
+#        plt.plot(buttLine[0][0], buttLine[0][1], '+', markersize=10)
+#        plt.plot(buttLine[1][0], buttLine[1][1], 'x', markersize=10)
 
     # The butt lines are used to split up the closed polygon into multiple
     # separate open paths to the left and the right of the original tracks
-    fencePaths = splitPath(offsetTrack, buttLineIdxList)
+    fencePaths = splitPathByPaths(offsetTrack, buttLineIdxList)
     viaPoints = []
+
+    for path in fencePaths:
+        pass
+#        plt.plot(np.array(path).T[0], np.array(path).T[1])
+#        plt.plot(path[0][0], path[0][1], '+', markersize=10, markeredgewidth=2)
+#        plt.plot(path[-1][0], path[-1][1], 'x', markersize=10, markeredgewidth=2)
+
 
     # With the now separated open paths we perform via placement on each one of them
     for fencePath in fencePaths:
@@ -173,51 +242,99 @@ def generateViaFence(tracks, viaOffset, viaPitch):
         # satisfying a defined specification. This way non-smooth (i.e. non-arcs) are
         # identified in the fence path. We use these to place fixed vias on their positions
         # We also use start and end vertices of the fence path as fixed via locations
-        fixPointIdxList = [0] + getPathVertices(fencePath, 0, 170) + [-1]
+        fixPointIdxList = [0] + getPathVertices(fencePath, 10) + [-1]
         viaPoints += [fencePath[idx] for idx in fixPointIdxList]
 
+#        continue
         # Then we autoplace vias between the fixed via locations by satisfying the
         # minimum via pitch given by the user
-        for subPath in splitPath(fencePath, fixPointIdxList):
+        for subPath in splitPathByPoints(fencePath, fixPointIdxList):
             # Now equally space the vias along the subpath using the given minimum pitch
             # Add the generated vias to the list
             viaPoints += distributeAlongPath(subPath, viaPitch)
+            plt.plot(np.array(subPath).T[0], np.array(subPath).T[1])
+            pass
 
     return viaPoints
 
+
+
 if __name__ == "__main__":
+    import csv
+
+    def readPath(stream):
+        pathList = []
+        for row in csv.reader(stream, delimiter=','):
+            vertices = [field.split(';') for field in row]
+            pathList += [ [ [int(xy) for xy in vertex] for vertex in vertices ] ]
+        return pathList
+
     # Set some via parameters
     # generate some test paths and run
     viaOffset = 500
     viaPitch = 300
 
-    tracks = [ [ [1000, 1000], [3000, 3000], [5000, 3000], [5000, 5000], [3000, 7000], [5000, 7000] ],
-                [ [3000, 3000], [2000, 5000], [1000, 5000] ] ]
+    with open('via-fence-generator-track.csv', 'rb') as file:
+        pathList = readPath(file)
 
-    viaPoints = generateViaFence(tracks, viaOffset, viaPitch)
+    viaPoints = generateViaFence(pathList, viaOffset, viaPitch)
 
-
-    # This is just for plotting stuff
-    import matplotlib.pyplot as plt
-    import numpy as np
-
-    def plotPaths(pathList, **kwargs):
-        for path in pathList:
-            plt.plot(np.array(path).T[0], np.array(path).T[1], **kwargs)
-            plt.plot(path[0][0], path[0][1], '+', **kwargs)
-            plt.plot(path[-1][0], path[-1][1], 'x', **kwargs)
-
-    def plotPoints(points, **kwargs):
-        plt.plot(np.array(points).T[0], np.array(points).T[1], 'o', **kwargs)
-
-
-
-    # plot the result
-    plotPaths(tracks, linewidth=5, markersize=10, markeredgewidth=2)
-    plotPoints(viaPoints, markersize=10)
+    for path in pathList:
+        plt.plot(np.array(path).T[0], np.array(path).T[1], linewidth=5)
+    for via in viaPoints:
+        plt.plot(via[0], via[1], 'o', markersize=10)
 
     plt.axes().set_aspect('equal','box')
     plt.xlim(0, 6000)
     plt.ylim(0, 8000)
+    plt.ylim(plt.ylim()[::-1])
     plt.savefig('via-fence-generator.png')
     plt.show()
+
+    exit(0)
+
+
+# Python plugin stuff
+class ViaFenceGenerator(pcbnew.ActionPlugin):
+    def defaults(self):
+        self.name = "Add a via fence to the PCB"
+        self.category = "Modify PCB"
+        self.description = "Automatically add a via fence to a net or tracks on the PCB"
+
+    def Run(self):
+        pcbObj = pcbnew.GetBoard()
+
+        netName = 'Net-(U1-Pad2)'
+        viaOffset = pcbnew.FromMM(0.5)
+        viaPitch =  pcbnew.FromMM(1)
+
+#        netId = pcbObj.FindNet(netName).GetNet()
+        netId = pcbObj.GetHighLightNetCode()
+
+        if (netId != -1):
+            netTracks = pcbObj.TracksInNet(netId)
+
+            trackList = [ [[t.GetStart()[0], t.GetStart()[1]], [t.GetEnd()[0], t.GetEnd()[1]]] for t in netTracks ]
+            viaPoints = generateViaFence(trackList, viaOffset, viaPitch)
+
+
+            for track in trackList:
+                plt.plot(np.array(track).T[0], np.array(track).T[1], linewidth=1)
+            for via in viaPoints:
+                plt.plot(via[0], via[1], 'o', markersize=10)
+
+
+            plt.ylim(plt.ylim()[::-1])
+            plt.axes().set_aspect('equal','box')
+        #    plt.xlim(0, 6000)
+        #    plt.ylim(0, 8000)
+            plt.show()
+
+
+
+
+
+
+
+ViaFenceGenerator().register()
+
