@@ -4,24 +4,30 @@ import math
 import pyclipper
 from bisect import bisect_left
 
+# Returns the slope of a line
 def getLineSlope(line):
     return math.atan2(line[0][1]-line[1][1], line[0][0]-line[1][0])
 
+# Returns the length of a line
 def getLineLength(line):
     return math.hypot(line[0][0]-line[1][0], line[0][1]-line[1][1])
 
+# Returns a sub paths in a path with a path specification (startIdx, stopIdx)
 def getSubPath(path, pathSpec):
     listModulus = len(path)
     if (pathSpec[1] < pathSpec[0]): pathSpec[1] += listModulus
     return [path[i % listModulus] for i in range(pathSpec[0], pathSpec[1]+1)]
 
+# Returns a list of subpaths with a list of path specifications
 def getSubPaths(path, pathSpecList):
     return [getSubPath(path, pathSpec) for pathSpec in pathSpecList if (pathSpec[0] != pathSpec[1])]
 
+# Splits a path using a list of indices representing points on the path
 def splitPathByPoints(path, splitList):
     pathSpecList = [[splitList[item], splitList[item+1]] for item in range(0, len(splitList)-1)]
     return getSubPaths(path, pathSpecList)
 
+# Splits a path around a list of list of indices representing a subpath within the original path
 def splitPathByPaths(path, splitList):
     pathSpecList = [[splitList[item][-1], splitList[(item+1)%len(splitList)][0]] for item in range(0, len(splitList))]
     return getSubPaths(path, pathSpecList)
@@ -39,7 +45,7 @@ def getPathCumDist(path):
 # the two lines connected to the vertex deviate from a straight
 # path more by the tolerance angle in degrees
 # This function is used to find bends that are larger than a certain angle
-def getPathVertices(pathList, angleTolerance):
+def getPathVertices(path, angleTolerance):
     angleTolerance = angleTolerance * math.pi / 180
     vertices = []
 
@@ -47,9 +53,9 @@ def getPathVertices(pathList, angleTolerance):
     # Calculate by how much the lines before and after the vertex
     # deviate from a straight path.
     # If the deviation angle exceeds the specification, store it
-    for vertexIdx in range(1, len(pathList)-1):
-        prevSlope = getLineSlope([pathList[vertexIdx+1], pathList[vertexIdx]])
-        nextSlope = getLineSlope([pathList[vertexIdx-1], pathList[vertexIdx]])
+    for vertexIdx in range(1, len(path)-1):
+        prevSlope = getLineSlope([path[vertexIdx+1], path[vertexIdx]])
+        nextSlope = getLineSlope([path[vertexIdx-1], path[vertexIdx]])
         deviationAngle = abs(prevSlope - nextSlope) - math.pi
         if (abs(deviationAngle) > angleTolerance):
             vertices += [vertexIdx]
@@ -70,14 +76,14 @@ def isPointOnLine(point, line):
 def getPathsThroughPoints(path, pointList):
     touchingPaths = []
 
-    for vertexIdx in range(0, len(path)-1):
-        # This is the current line segment to test
-        line = [ path[vertexIdx], path[vertexIdx+1] ]
+    for vertexIdx in range(0, len(path)):
+        fromIdx = vertexIdx
+        toIdx = (vertexIdx+1) % len(path)
 
         # If a point in the pointList is located on this line, store the line
         for point in pointList:
-            if isPointOnLine(point, line):
-                touchingPaths += [[vertexIdx, vertexIdx+1]]
+            if isPointOnLine(point, [ path[fromIdx], path[toIdx] ]):
+                touchingPaths += [[fromIdx, toIdx]]
                 break
 
     return touchingPaths
@@ -105,6 +111,7 @@ class PathInterpolator:
         # Return interpolated coordinates on the original path
         return [self.xInterp(t), self.yInterp(t)]
 
+# A small pyclipper wrapper class to expand a line to a polygon with a given offset
 def expandPathsToPolygons(pathList, offset):
     # Use PyclipperOffset to generate polygons that surround the original
     # paths with a constant offset all around
@@ -112,6 +119,7 @@ def expandPathsToPolygons(pathList, offset):
     co.AddPaths(pathList, pyclipper.JT_ROUND, pyclipper.ET_OPENROUND)
     return co.Execute(offset)
 
+# A small pyclipper wrapper to trim parts of a polygon using another polygon
 def clipPolygonWithPolygons(path, clipPathList):
     pc = pyclipper.Pyclipper()
     pc.AddPath(path, pyclipper.PT_SUBJECT, True)
@@ -125,13 +133,13 @@ def clipPolygonWithPolygons(path, clipPathList):
 def distributeAlongPath(path, minimumSpacing):
     # Get cumulated distance vector for the path
     # and determine the number of points that can fit to the path
-    # determine the final pitch by dividing the total path length
-    # by the rounded down number of points
     distList = getPathCumDist(path)
     nPoints = int(math.floor(distList[-1] / minimumSpacing))
     ptInterp = PathInterpolator(distList, path)
     return [ptInterp(ptIdx * distList[-1]/nPoints) for ptIdx in range(1, nPoints)]
 
+# Find the leaf vertices in a list of paths,
+# additionally it calculates the slope of the line connected to the leaf vertex
 def getLeafVertices(pathList):
     allVertices = [vertex for path in pathList for vertex in path]
     leafVertices = []
@@ -149,11 +157,13 @@ def getLeafVertices(pathList):
 
     return leafVertices, leafVertexSlopes
 
+# Rotate and Translate a list of vertices using a given angle and offset
 def transformVertices(vertexList, offset, angle):
     return [ [ offset[0] + math.cos(angle) * vertex[0] - math.sin(angle) * vertex[1],
                offset[1] + math.sin(angle) * vertex[0] + math.cos(angle) * vertex[1] ]
            for vertex in vertexList]
 
+# Trims a polygon flush around the given vertices
 def trimFlushPolygonAtVertices(path, vertexList, vertexSlopes, extent):
     trimRect = [ [0, -extent], [0, 0], [0, extent], [-extent, extent], [-extent, -extent] ]
     trimPolys = [transformVertices(trimRect, vertexPos, vertexSlope)
@@ -162,41 +172,37 @@ def trimFlushPolygonAtVertices(path, vertexList, vertexSlopes, extent):
 
 
 ######################
-import matplotlib.pyplot as plt
-import numpy as np
-
 def generateViaFence(pathList, viaOffset, viaPitch):
-    # Expand the paths given as a parameter into one or more polygons
-    # using the offset parameter
-    offsetPath = expandPathsToPolygons(pathList, viaOffset)[0]
-
-# TODO: multiple paths
-
-    # Find all leaf vertices and use them to trim the expanded polygon
-    # around the leaf vertices so that we get a flush, flat end
-    # These butt lines are then found using the leaf vertices
-    # and used to split open the polygon into multiple separate open
-    # paths that envelop the original path
-    leafVertexList, leafVertexAngles = getLeafVertices(pathList)
-    offsetPath = trimFlushPolygonAtVertices(offsetPath, leafVertexList, leafVertexAngles, 1.5*viaOffset)[0]
-    buttLineIdxList = getPathsThroughPoints(offsetPath, leafVertexList)
-    fencePaths = splitPathByPaths(offsetPath, buttLineIdxList)
-
     viaPoints = []
 
-    # With the now separated open paths we perform via placement on each one of them
-    for fencePath in fencePaths:
-        # For a nice via fence placement, we identify vertices that differ from a straight
-        # line by more than 10 degrees so we find all non-arc edges
-        # We combine these points with the start and end point of the path and use
-        # them to place fixed vias on their positions
-        fixPointIdxList = [0] + getPathVertices(fencePath, 10) + [-1]
-        viaPoints += [fencePath[idx] for idx in fixPointIdxList]
+    # Expand the paths given as a parameter into one or more polygons
+    # using the offset parameter
+    offsetPaths = expandPathsToPolygons(pathList, viaOffset)
 
-        # Then we autoplace vias between the fixed via locations by satisfying the
-        # minimum via pitch given by the user
-        for subPath in splitPathByPoints(fencePath, fixPointIdxList):
-            viaPoints += distributeAlongPath(subPath, viaPitch)
+    for offsetPath in offsetPaths:
+        # Find all leaf vertices and use them to trim the expanded polygon
+        # around the leaf vertices so that we get a flush, flat end
+        # These butt lines are then found using the leaf vertices
+        # and used to split open the polygon into multiple separate open
+        # paths that envelop the original path
+        leafVertexList, leafVertexAngles = getLeafVertices(pathList)
+        offsetPath = trimFlushPolygonAtVertices(offsetPath, leafVertexList, leafVertexAngles, 1.5*viaOffset)[0]
+        buttLineIdxList = getPathsThroughPoints(offsetPath, leafVertexList)
+        fencePaths = splitPathByPaths(offsetPath, buttLineIdxList)
+
+        # With the now separated open paths we perform via placement on each one of them
+        for fencePath in fencePaths:
+            # For a nice via fence placement, we identify vertices that differ from a straight
+            # line by more than 10 degrees so we find all non-arc edges
+            # We combine these points with the start and end point of the path and use
+            # them to place fixed vias on their positions
+            fixPointIdxList = [0] + getPathVertices(fencePath, 10) + [-1]
+            viaPoints += [fencePath[idx] for idx in fixPointIdxList]
+
+            # Then we autoplace vias between the fixed via locations by satisfying the
+            # minimum via pitch given by the user
+            for subPath in splitPathByPoints(fencePath, fixPointIdxList):
+                viaPoints += distributeAlongPath(subPath, viaPitch)
 
     return viaPoints
 
@@ -204,6 +210,8 @@ def generateViaFence(pathList, viaOffset, viaPitch):
 
 if __name__ == "__main__":
     import json
+    import matplotlib.pyplot as plt
+    import numpy as np
 
     # Load test dataset
     datasetFile = 'via-fence-generator-test.json'
@@ -214,6 +222,10 @@ if __name__ == "__main__":
     viaPitch = dict['viaPitch']
     pathList = dict['pathList']
 
+    for path in pathList:
+        plt.plot(np.array(path).T[0], np.array(path).T[1], linewidth=5)
+
+
     viaPoints = generateViaFence(pathList, viaOffset, viaPitch)
 
     with open(datasetFile, 'wb') as file:
@@ -221,14 +233,12 @@ if __name__ == "__main__":
         json.dump(dict, file, indent=4)
 
 
-    for path in pathList:
-        plt.plot(np.array(path).T[0], np.array(path).T[1], linewidth=5)
     for via in viaPoints:
         plt.plot(via[0], via[1], 'o', markersize=10)
 
     plt.axes().set_aspect('equal','box')
-    plt.xlim(0, 6000)
-    plt.ylim(0, 8000)
+#    plt.xlim(0, 6000)
+#    plt.ylim(0, 8000)
     plt.ylim(plt.ylim()[::-1])
     plt.savefig('via-fence-generator.png')
     plt.show()
@@ -250,10 +260,10 @@ class ViaFenceGenerator(pcbnew.ActionPlugin):
         netId = pcbObj.GetHighLightNetCode()
 
         if (netId != -1):
-            # Get tracks in currently selected net and convert them to a list of list
-            # Then run the via fence generator
             netTracks = pcbObj.TracksInNet(netId)
             trackList = [ [[t.GetStart()[0], t.GetStart()[1]], [t.GetEnd()[0], t.GetEnd()[1]]] for t in netTracks ]
+
+
             viaPoints = generateViaFence(trackList, viaOffset, viaPitch)
 
 
