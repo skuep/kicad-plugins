@@ -2,14 +2,7 @@
 import pcbnew
 import math
 import pyclipper
-import collections
 from bisect import bisect_left
-from itertools import cycle
-
-
-import matplotlib.pyplot as plt
-import numpy as np
-
 
 def getLineSlope(line):
     return math.atan2(line[0][1]-line[1][1], line[0][0]-line[1][0])
@@ -119,6 +112,12 @@ def expandPathsToPolygons(pathList, offset):
     co.AddPaths(pathList, pyclipper.JT_ROUND, pyclipper.ET_OPENROUND)
     return co.Execute(offset)
 
+def clipPolygonWithPolygons(path, clipPathList):
+    pc = pyclipper.Pyclipper()
+    pc.AddPath(path, pyclipper.PT_SUBJECT, True)
+    pc.AddPaths(clipPathList, pyclipper.PT_CLIP, True)
+    return pc.Execute(pyclipper.CT_DIFFERENCE)
+
 # Distribute Points along a path with equal spacing to each other
 # When the path length is not evenly dividable by the minimumSpacing,
 # the actual spacing will be larger, but still smaller than 2*minimumSpacing
@@ -133,69 +132,42 @@ def distributeAlongPath(path, minimumSpacing):
     ptInterp = PathInterpolator(distList, path)
     return [ptInterp(ptIdx * distList[-1]/nPoints) for ptIdx in range(1, nPoints)]
 
-def getLeafVertices(tracks):
+def getLeafVertices(pathList):
+    allVertices = [vertex for path in pathList for vertex in path]
     leafVertices = []
-    leafVertexNeighbours = []
-    leafVertexAngles = []
+    leafVertexSlopes = []
 
-    for trackA in tracks:
-        for vertexIdxA in [0,-1]:
-            vertexA = trackA[vertexIdxA]
-            vertexOccurences = 0
-            for trackB in tracks:
-                for vertexB in trackB:
-                    if (vertexA[0] == vertexB[0]) and (vertexA[1] == vertexB[1]):
-                        vertexOccurences += 1
-            if (vertexOccurences == 1):
-                # vertex appears only once in total
-                leafVertices += [vertexA]
-                # Get neighbour vertex
-                if (vertexIdxA == 0): neighbourVertex = trackA[1]
-                elif (vertexIdxA == -1): neighbourVertex = trackA[-2]
-                leafVertexAngles += [getLineSlope([neighbourVertex, vertexA])]
+    for path in pathList:
+        for vertexIdx in [0,-1]:
+            if (allVertices.count(path[vertexIdx]) == 1):
+                # vertex appears only once in entire path list, store away
+                # Get neighbour vertex and also calculate the slope
+                leafVertex = path[vertexIdx]
+                neighbourVertex = path[ [1,-2][vertexIdx] ]
+                leafVertices += [leafVertex]
+                leafVertexSlopes += [getLineSlope([neighbourVertex, leafVertex])]
 
-    return leafVertices, leafVertexAngles
+    return leafVertices, leafVertexSlopes
 
 def transformVertices(vertexList, offset, angle):
-    newVertexList = []
-    for vertex in vertexList:
-        newVertexList += [[ offset[0] + math.cos(angle) * vertex[0] - math.sin(angle) * vertex[1],
-                            offset[1] + math.sin(angle) * vertex[0] + math.cos(angle) * vertex[1] ]]
-    return newVertexList
+    return [ [ offset[0] + math.cos(angle) * vertex[0] - math.sin(angle) * vertex[1],
+               offset[1] + math.sin(angle) * vertex[0] + math.cos(angle) * vertex[1] ]
+           for vertex in vertexList]
 
 ######################
-def generateViaFence(pathList, viaOffset, viaPitch):
-    offsetTrack = expandPathsToPolygons(pathList, viaOffset)[0]
+import matplotlib.pyplot as plt
+import numpy as np
 
+def generateViaFence(pathList, viaOffset, viaPitch):
+    # Expand the paths given as a parameter into one or more polygons
+    # using the offset parameter
+    offsetPath = expandPathsToPolygons(pathList, viaOffset)[0]
 
 # TODO: multiple paths
 
-#    pc1 = pyclipper.Pyclipper()
-#    test = pc1.AddPaths(tracks, pyclipper.PT_SUBJECT, False)
-#    bla = pc1.Execute2(pyclipper.CT_UNION)
-
-#    tracks=(pyclipper.OpenPathsFromPolyTree(bla))
-
-    # Since PyclipperOffset returns a closed path, we need to find
-    # the butt lines in this closed path, i.e. the lines that are
-    # perpendicular to the original tracks' start and end points
-    # First collect all the start and end vertices of all input paths
-    # Then check if any of those vertices are located on any of
-    # the polygon line segments
-    # If this is the case, we consider them a butt line
+    # Find all leaf vertices 
     leafVertexList, leafVertexAngles = getLeafVertices(pathList)
 
-#    allVertices = [track for subTracks in tracks for track in subTracks]
-#    startEndVertexList = [track[idx] for idx in [0, -1] for track in tracks]
-#    leafVertexList = getVerticesUniqueIn(startEndVertexList, allVertices) # leafVertices are unique
-
-    # how to get the slope of leafVertex?
-    # Maybe make class Vertex inherit from namedtuple with x,y,prev,next,unique?
-    # let getVerticesUniqueIn return lines?
-    # how to find the point connected to leavVertex? search for it?
-    # Can we get indexes from getVerticesUniqueIn? has to be hierachical: LineIdx, pointIdx
-    # Rotate the cutRect to match the end style thing
-    # pyclipper.clip(not) it
     for idx in range(0, len(leafVertexList)):
         plt.text(leafVertexList[idx][0], leafVertexList[idx][1], leafVertexAngles[idx])
 
@@ -208,25 +180,22 @@ def generateViaFence(pathList, viaOffset, viaPitch):
         cutRects += [newRect]
 #        plt.plot(np.array(newRect).T[0], np.array(newRect).T[1])
 
-    pc = pyclipper.Pyclipper()
-    pc.AddPath(offsetTrack, pyclipper.PT_SUBJECT, True)
-    pc.AddPaths(cutRects, pyclipper.PT_CLIP, True)
-    offsetTrack = pc.Execute(pyclipper.CT_DIFFERENCE)[0]
+    offsetPath = clipPolygonWithPolygons(offsetPath, cutRects)[0]
 
  #   plt.plot(np.array(offsetTrack).T[0], np.array(offsetTrack).T[1])
 
 
-    buttLineIdxList = getPathsThroughPoints(offsetTrack, leafVertexList)
-    print(buttLineIdxList)
+    buttLineIdxList = getPathsThroughPoints(offsetPath, leafVertexList)
+#    print(buttLineIdxList)
     for buttLineIdx in buttLineIdxList:
-        buttLine = [ offsetTrack[buttLineIdx[0]], offsetTrack[buttLineIdx[1]] ]
+        buttLine = [ offsetPath[buttLineIdx[0]], offsetPath[buttLineIdx[1]] ]
 #        plt.plot(np.array(buttLine).T[0], np.array(buttLine).T[1])
 #        plt.plot(buttLine[0][0], buttLine[0][1], '+', markersize=10)
 #        plt.plot(buttLine[1][0], buttLine[1][1], 'x', markersize=10)
 
     # The butt lines are used to split up the closed polygon into multiple
     # separate open paths to the left and the right of the original tracks
-    fencePaths = splitPathByPaths(offsetTrack, buttLineIdxList)
+    fencePaths = splitPathByPaths(offsetPath, buttLineIdxList)
     viaPoints = []
 
     for path in fencePaths:
@@ -260,24 +229,22 @@ def generateViaFence(pathList, viaOffset, viaPitch):
 
 
 if __name__ == "__main__":
-    import csv
+    # Load test dataset
+    datasetFile = 'via-fence-generator-test.json'
 
-    def readPath(stream):
-        pathList = []
-        for row in csv.reader(stream, delimiter=','):
-            vertices = [field.split(';') for field in row]
-            pathList += [ [ [int(xy) for xy in vertex] for vertex in vertices ] ]
-        return pathList
-
-    # Set some via parameters
-    # generate some test paths and run
-    viaOffset = 500
-    viaPitch = 300
-
-    with open('via-fence-generator-track.csv', 'rb') as file:
-        pathList = readPath(file)
+    import json
+    with open(datasetFile, 'rb') as file:
+        dict = json.load(file)
+    viaOffset = dict['viaOffset']
+    viaPitch = dict['viaPitch']
+    pathList = dict['pathList']
 
     viaPoints = generateViaFence(pathList, viaOffset, viaPitch)
+
+    with open(datasetFile, 'wb') as file:
+        dict = {'pathList': pathList, 'viaOffset': viaOffset, 'viaPitch': viaPitch, 'viaPoints': viaPoints}
+        json.dump(dict, file, indent=4)
+
 
     for path in pathList:
         plt.plot(np.array(path).T[0], np.array(path).T[1], linewidth=5)
