@@ -207,12 +207,11 @@ def generateViaFence(pathList, viaOffset, viaPitch):
     return viaPoints
 
 
+import json
+import matplotlib.pyplot as plt
+import numpy as np
 
 if __name__ == "__main__":
-    import json
-    import matplotlib.pyplot as plt
-    import numpy as np
-
     # Load test dataset
     datasetFile = 'via-fence-generator-test.json'
 
