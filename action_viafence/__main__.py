@@ -2,9 +2,9 @@ from .viafence import *
 import argparse
 
 argParser = argparse.ArgumentParser()
-argParser.add_argument("--dialog",        dest="dialog",      metavar="DIALOGNAME", help="Show Dialog with <DIALOGNAME>")
-argParser.add_argument("--runtests",     dest="runtests",    action="store_true", default=0, help="Execute testing all json test files in 'tests' subdirectory")
-argParser.add_argument("--updatetest",    dest="updatetest",  metavar="TESTNAME", help="Loads <TESTNAME> from 'tests' directory, runs it and shows/stores the result into the test file")
+argParser.add_argument("--dialog",      dest="dialog",      metavar="DIALOGNAME", help="Show Dialog with <DIALOGNAME>")
+argParser.add_argument("--runtests",    dest="runtests",    action="store_true", default=0, help="Execute testing all json test files in 'tests' subdirectory")
+argParser.add_argument("--test",        dest="test",        metavar="TESTNAME", help="Loads <TESTNAME> from 'tests' directory, runs it and shows/stores the result into the test file")
 
 args = argParser.parse_args()
 
@@ -19,14 +19,14 @@ if (args.dialog):
     className(None).Show()
     app.MainLoop()
 
-elif (args.updatetest):
+elif (args.test):
     # Load a test file, run the algorithm and show/store the result for later testing
     import os
     import json
     import matplotlib.pyplot as plt
     import numpy as np
 
-    testFile = args.updatetest
+    testFile = args.test
     scriptDir = os.path.dirname(os.path.realpath(__file__))
     testDir = scriptDir + "/" + 'tests'
 
