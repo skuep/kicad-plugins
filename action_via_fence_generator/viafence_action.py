@@ -3,8 +3,9 @@ import pcbnew
 import matplotlib.pyplot as plt
 import numpy as np
 from .viafence import *
+from .viafence_dialogs import *
 
-class ActionViaFence(pcbnew.ActionPlugin):
+class ViaFenceAction(pcbnew.ActionPlugin):
     def defaults(self):
         self.name = "Via Fence Generator"
         self.category = "Modify PCB"
@@ -15,6 +16,9 @@ class ActionViaFence(pcbnew.ActionPlugin):
         viaOffset = pcbnew.FromMM(0.5)
         viaPitch =  pcbnew.FromMM(1)
         netId = pcbObj.GetHighLightNetCode()
+
+#        mainDlg = MainDialog(None)
+#        mainDlg.ShowModal()
 
         if (netId != -1):
             netTracks = pcbObj.TracksInNet(netId)
