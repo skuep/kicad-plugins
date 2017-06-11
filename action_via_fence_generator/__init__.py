@@ -3,8 +3,8 @@
 # We import the plugin class here and register it to pcbnew
 
 try:
-    from .action_via_fence_generator import ActionViaFenceGenerator
-    ActionViaFenceGenerator().register()
+    from .action_viafence import ActionViaFence
+    ActionViaFence().register()
 except ImportError:
     print('pcbnew package not available. Not registering as a plugin.')
     # pcbnew is not available

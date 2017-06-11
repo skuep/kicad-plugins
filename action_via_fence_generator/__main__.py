@@ -1,4 +1,4 @@
-from .via_fence import *
+from .viafence import *
 import os
 import json
 import matplotlib.pyplot as plt

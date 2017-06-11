@@ -2,9 +2,9 @@
 import pcbnew
 import matplotlib.pyplot as plt
 import numpy as np
-from .via_fence import *
+from .viafence import *
 
-class ActionViaFenceGenerator(pcbnew.ActionPlugin):
+class ActionViaFence(pcbnew.ActionPlugin):
     def defaults(self):
         self.name = "Via Fence Generator"
         self.category = "Modify PCB"
