@@ -9,7 +9,7 @@ scriptDir = os.path.dirname(os.path.realpath(__file__))
 testDir = scriptDir + "/" + 'tests'
 datasetFile = 'simple-test'
 
-with open(testDir+"/"+datasetFile+".json", 'rb') as file:
+with open(testDir+"/"+datasetFile+".json", 'r') as file:
     dict = json.load(file)
 viaOffset = dict['viaOffset']
 viaPitch = dict['viaPitch']
@@ -21,7 +21,7 @@ for path in pathList:
 
 viaPoints = generateViaFence(pathList, viaOffset, viaPitch)
 
-with open(testDir+"/"+datasetFile+".json", 'wb') as file:
+with open(testDir+"/"+datasetFile+".json", 'w') as file:
     dict = {'pathList': pathList, 'viaOffset': viaOffset, 'viaPitch': viaPitch, 'viaPoints': viaPoints}
     json.dump(dict, file, indent=4)
 

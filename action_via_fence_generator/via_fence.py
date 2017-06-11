@@ -1,5 +1,4 @@
 #!/usr/bin/env python2
-import pcbnew
 import math
 import pyclipper
 from bisect import bisect_left
