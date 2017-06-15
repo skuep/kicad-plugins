@@ -12,4 +12,5 @@ However it does not add vias to your board but instead show them in a pyplot win
 You can also run the plugin standalone by cd'ing into the parent folder (i.e. ~/kicad_plugins/) and run
 
     $ python -m action_viafence --help # Show help 
-    $ python -m action_viafence --test simple-test # starts the simple-test testcase and shows it on the screen
+    $ python -m action_viafence --verbose --test simple-test # starts the simple-test testcase and shows it on the screen
+    $ python -m action_viafence --runtests # runs all test cases in the `tests` subdirectory
