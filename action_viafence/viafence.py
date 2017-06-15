@@ -3,6 +3,10 @@ import math
 import pyclipper
 from bisect import bisect_left
 
+def verbose(object, isPaths = False, isClosed = False):
+    global verboseFunc
+    verboseFunc(object, isPaths, isClosed)
+
 # Returns the slope of a line
 def getLineSlope(line):
     return math.atan2(line[0][1]-line[1][1], line[0][0]-line[1][0])
@@ -125,6 +129,11 @@ def clipPolygonWithPolygons(path, clipPathList):
     pc.AddPaths(clipPathList, pyclipper.PT_CLIP, True)
     return pc.Execute(pyclipper.CT_DIFFERENCE)
 
+def unionPolygons(pathList):
+    pc = pyclipper.Pyclipper()
+    pc.AddPaths(pathList, pyclipper.PT_SUBJECT, True)
+    return pc.Execute(pyclipper.CT_UNION, pyclipper.PFT_NONZERO)
+
 def isPointInPolygon(point, path):
     return True if (pyclipper.PointInPolygon(point, path) == 1) else False
 
@@ -183,16 +192,22 @@ def trimFlushPolygonAtVertices(path, vertexList, vertexSlopes, extent):
     trimRect = [ [0, -extent], [0, 0], [0, extent], [-extent, extent], [-extent, -extent] ]
     trimPolys = [transformVertices(trimRect, vertexPos, vertexSlope)
         for vertexPos, vertexSlope in zip(vertexList, vertexSlopes)]
+
+    trimPolys = unionPolygons(trimPolys)
     return clipPolygonWithPolygons(path, trimPolys)
 
 
+
 ######################
-def generateViaFence(pathList, viaOffset, viaPitch):
+def generateViaFence(pathList, viaOffset, viaPitch, vFunc = lambda *args:None):
+    global verboseFunc
+    verboseFunc = vFunc
     viaPoints = []
 
     # Expand the paths given as a parameter into one or more polygons
     # using the offset parameter
     for offsetPoly in expandPathsToPolygons(pathList, viaOffset):
+        verbose([offsetPoly], isPaths=True, isClosed=True)
         # Filter the input path to only include paths inside this polygon
         # Find all leaf vertices and use them to trim the expanded polygon
         # around the leaf vertices so that we get a flush, flat end
@@ -205,6 +220,10 @@ def generateViaFence(pathList, viaOffset, viaPitch):
         buttLineIdxList = getPathsThroughPoints(offsetPoly, leafVertexList)
         fencePaths = splitPathByPaths(offsetPoly, buttLineIdxList)
 
+        verbose([offsetPoly], isPaths=True, isClosed=True)
+        verbose([leafVertexList], isPaths=False)
+        verbose(fencePaths, isPaths=True)
+
         # With the now separated open paths we perform via placement on each one of them
         for fencePath in fencePaths:
             # For a nice via fence placement, we identify vertices that differ from a straight
@@ -212,8 +231,10 @@ def generateViaFence(pathList, viaOffset, viaPitch):
             # We combine these points with the start and end point of the path and use
             # them to place fixed vias on their positions
             fixPointIdxList = [0] + getPathVertices(fencePath, 10) + [-1]
-            viaPoints += [fencePath[idx] for idx in fixPointIdxList]
+            fixPointList = [fencePath[idx] for idx in fixPointIdxList]
+            verbose(fixPointList)
 
+            viaPoints += fixPointList
             # Then we autoplace vias between the fixed via locations by satisfying the
             # minimum via pitch given by the user
             for subPath in splitPathByPoints(fencePath, fixPointIdxList):
