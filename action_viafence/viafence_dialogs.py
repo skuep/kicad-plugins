@@ -11,15 +11,15 @@ import wx
 import wx.xrc
 
 ###########################################################################
-## Class MainDialog
+## Class MainDialogBase
 ###########################################################################
 
-class MainDialog ( wx.Dialog ):
+class MainDialogBase ( wx.Dialog ):
 	
 	def __init__( self, parent ):
-		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = u"Via Fence Generator", pos = wx.DefaultPosition, size = wx.Size( -1,-1 ), style = wx.DEFAULT_DIALOG_STYLE )
+		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = u"Via Fence Generator", pos = wx.DefaultPosition, size = wx.Size( -1,-1 ), style = wx.CAPTION|wx.CLOSE_BOX )
 		
-		self.SetSizeHintsSz( wx.DefaultSize, wx.DefaultSize )
+		self.SetSizeHintsSz( wx.Size( 400,450 ), wx.Size( 400,600 ) )
 		
 		bSizer2 = wx.BoxSizer( wx.VERTICAL )
 		
@@ -40,36 +40,36 @@ class MainDialog ( wx.Dialog ):
 		self.m_staticText11.Wrap( -1 )
 		fgSizer4.Add( self.m_staticText11, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
 		
-		self.m_textCtrl11 = wx.TextCtrl( sbSizer2.GetStaticBox(), wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
-		fgSizer4.Add( self.m_textCtrl11, 0, wx.ALL|wx.EXPAND, 5 )
+		self.txtViaOffset = wx.TextCtrl( sbSizer2.GetStaticBox(), wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_RIGHT )
+		fgSizer4.Add( self.txtViaOffset, 0, wx.ALL|wx.EXPAND, 5 )
 		
 		self.m_staticText21 = wx.StaticText( sbSizer2.GetStaticBox(), wx.ID_ANY, u"Pitch (mm):", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText21.Wrap( -1 )
 		fgSizer4.Add( self.m_staticText21, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
 		
-		self.m_textCtrl21 = wx.TextCtrl( sbSizer2.GetStaticBox(), wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
-		fgSizer4.Add( self.m_textCtrl21, 0, wx.ALL|wx.EXPAND, 5 )
+		self.txtViaPitch = wx.TextCtrl( sbSizer2.GetStaticBox(), wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_RIGHT )
+		fgSizer4.Add( self.txtViaPitch, 0, wx.ALL|wx.EXPAND, 5 )
 		
-		self.m_staticText13 = wx.StaticText( sbSizer2.GetStaticBox(), wx.ID_ANY, u"Drill Dia. (mm):", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText13 = wx.StaticText( sbSizer2.GetStaticBox(), wx.ID_ANY, u"Via Drill (mm):", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText13.Wrap( -1 )
 		fgSizer4.Add( self.m_staticText13, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
 		
-		self.m_textCtrl111 = wx.TextCtrl( sbSizer2.GetStaticBox(), wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
-		fgSizer4.Add( self.m_textCtrl111, 0, wx.ALL|wx.EXPAND, 5 )
+		self.txtViaDrill = wx.TextCtrl( sbSizer2.GetStaticBox(), wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_RIGHT )
+		fgSizer4.Add( self.txtViaDrill, 0, wx.ALL|wx.EXPAND, 5 )
 		
-		self.m_staticText14 = wx.StaticText( sbSizer2.GetStaticBox(), wx.ID_ANY, u"Via Dia. (mm):", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText14 = wx.StaticText( sbSizer2.GetStaticBox(), wx.ID_ANY, u"Via Size (mm):", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText14.Wrap( -1 )
 		fgSizer4.Add( self.m_staticText14, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
 		
-		self.m_textCtrl12 = wx.TextCtrl( sbSizer2.GetStaticBox(), wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
-		fgSizer4.Add( self.m_textCtrl12, 0, wx.ALL|wx.EXPAND, 5 )
+		self.txtViaSize = wx.TextCtrl( sbSizer2.GetStaticBox(), wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_RIGHT )
+		fgSizer4.Add( self.txtViaSize, 0, wx.ALL|wx.EXPAND, 5 )
 		
 		self.m_staticText23 = wx.StaticText( sbSizer2.GetStaticBox(), wx.ID_ANY, u"Via Net:", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText23.Wrap( -1 )
 		fgSizer4.Add( self.m_staticText23, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
 		
-		self.m_textCtrl17 = wx.TextCtrl( sbSizer2.GetStaticBox(), wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
-		fgSizer4.Add( self.m_textCtrl17, 0, wx.ALL|wx.EXPAND, 5 )
+		self.txtViaNet = wx.TextCtrl( sbSizer2.GetStaticBox(), wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
+		fgSizer4.Add( self.txtViaNet, 0, wx.ALL|wx.EXPAND, 5 )
 		
 		
 		sbSizer2.Add( fgSizer4, 1, wx.EXPAND, 5 )
@@ -82,7 +82,7 @@ class MainDialog ( wx.Dialog ):
 		
 		bSizer21 = wx.BoxSizer( wx.VERTICAL )
 		
-		self.m_panel11 = wx.Panel( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.SIMPLE_BORDER|wx.TAB_TRAVERSAL )
+		self.m_panel11 = wx.Panel( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.SIMPLE_BORDER|wx.SUNKEN_BORDER|wx.TAB_TRAVERSAL )
 		bSizer24 = wx.BoxSizer( wx.VERTICAL )
 		
 		self.m_bitmap2 = wx.StaticBitmap( self.m_panel11, wx.ID_ANY, wx.Bitmap( u"resources/viafence.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, wx.DefaultSize, 0 )
@@ -99,50 +99,74 @@ class MainDialog ( wx.Dialog ):
 		
 		sbSizer411 = wx.StaticBoxSizer( wx.StaticBox( self, wx.ID_ANY, u"Input Tracks" ), wx.VERTICAL )
 		
-		gSizer4 = wx.GridSizer( 1, 2, 0, 0 )
-		
-		fgSizer31 = wx.FlexGridSizer( 2, 2, 0, 10 )
-		fgSizer31.AddGrowableCol( 1 )
-		fgSizer31.SetFlexibleDirection( wx.BOTH )
-		fgSizer31.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
-		
-		self.m_staticText51 = wx.StaticText( sbSizer411.GetStaticBox(), wx.ID_ANY, u"Layer:", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText51.Wrap( -1 )
-		fgSizer31.Add( self.m_staticText51, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
-		
-		m_choice21Choices = []
-		self.m_choice21 = wx.Choice( sbSizer411.GetStaticBox(), wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, m_choice21Choices, 0 )
-		self.m_choice21.SetSelection( 0 )
-		fgSizer31.Add( self.m_choice21, 0, wx.ALL|wx.EXPAND, 5 )
-		
-		
-		gSizer4.Add( fgSizer31, 1, wx.EXPAND, 5 )
+		gSizer4 = wx.GridSizer( 3, 1, 0, 0 )
 		
 		fgSizer311 = wx.FlexGridSizer( 2, 2, 0, 10 )
 		fgSizer311.AddGrowableCol( 1 )
 		fgSizer311.SetFlexibleDirection( wx.BOTH )
 		fgSizer311.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 		
-		self.m_staticText611 = wx.StaticText( sbSizer411.GetStaticBox(), wx.ID_ANY, u"Net(s):", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText611.Wrap( -1 )
-		fgSizer311.Add( self.m_staticText611, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL, 5 )
+		self.chkNetFilter = wx.CheckBox( sbSizer411.GetStaticBox(), wx.ID_ANY, u"Net(s):", wx.DefaultPosition, wx.DefaultSize, 0 )
+		fgSizer311.Add( self.chkNetFilter, 1, wx.ALL|wx.EXPAND, 5 )
 		
-		self.m_textCtrl411 = wx.TextCtrl( sbSizer411.GetStaticBox(), wx.ID_ANY, u"*", wx.DefaultPosition, wx.DefaultSize, 0 )
-		fgSizer311.Add( self.m_textCtrl411, 0, wx.ALL|wx.EXPAND, 5 )
+		txtNetFilterChoices = []
+		self.txtNetFilter = wx.ComboBox( sbSizer411.GetStaticBox(), wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, txtNetFilterChoices, 0 )
+		self.txtNetFilter.Enable( False )
+		
+		fgSizer311.Add( self.txtNetFilter, 1, wx.ALL|wx.EXPAND, 5 )
 		
 		
 		gSizer4.Add( fgSizer311, 1, wx.EXPAND, 5 )
+		
+		fgSizer31 = wx.FlexGridSizer( 2, 2, 0, 10 )
+		fgSizer31.AddGrowableCol( 1 )
+		fgSizer31.SetFlexibleDirection( wx.BOTH )
+		fgSizer31.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+		
+		self.chkLayer = wx.CheckBox( sbSizer411.GetStaticBox(), wx.ID_ANY, u"Layer:", wx.DefaultPosition, wx.DefaultSize, 0 )
+		fgSizer31.Add( self.chkLayer, 1, wx.ALL|wx.EXPAND, 5 )
+		
+		lstLayerChoices = []
+		self.lstLayer = wx.Choice( sbSizer411.GetStaticBox(), wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, lstLayerChoices, 0 )
+		self.lstLayer.SetSelection( 0 )
+		self.lstLayer.Enable( False )
+		
+		fgSizer31.Add( self.lstLayer, 1, wx.ALL|wx.EXPAND, 5 )
+		
+		
+		gSizer4.Add( fgSizer31, 1, wx.EXPAND, 5 )
+		
+		fgSizer312 = wx.FlexGridSizer( 2, 2, 0, 10 )
+		fgSizer312.AddGrowableCol( 1 )
+		fgSizer312.SetFlexibleDirection( wx.BOTH )
+		fgSizer312.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+		
+		self.chkIncludeLinesPolygons = wx.CheckBox( sbSizer411.GetStaticBox(), wx.ID_ANY, u"Include Lines/Polygons", wx.DefaultPosition, wx.DefaultSize, 0 )
+		fgSizer312.Add( self.chkIncludeLinesPolygons, 1, wx.ALL|wx.EXPAND, 5 )
+		
+		
+		gSizer4.Add( fgSizer312, 1, wx.EXPAND, 5 )
 		
 		
 		sbSizer411.Add( gSizer4, 1, wx.EXPAND, 5 )
 		
 		
-		gbSizer4.Add( sbSizer411, wx.GBPosition( 1, 0 ), wx.GBSpan( 1, 2 ), wx.ALL|wx.EXPAND, 5 )
+		gbSizer4.Add( sbSizer411, wx.GBPosition( 1, 0 ), wx.GBSpan( 1, 1 ), wx.ALL|wx.EXPAND, 5 )
 		
 		
 		gbSizer4.AddGrowableCol( 0 )
 		
 		bSizer2.Add( gbSizer4, 1, wx.EXPAND, 5 )
+		
+		bSizer5 = wx.BoxSizer( wx.HORIZONTAL )
+		
+		self.btnSave = wx.Button( self, wx.ID_ANY, u"Save...", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.btnSave.Enable( False )
+		
+		bSizer5.Add( self.btnSave, 0, wx.ALL, 5 )
+		
+		
+		bSizer5.AddSpacer( ( 0, 0), 1, wx.EXPAND, 5 )
 		
 		m_sdbSizer1 = wx.StdDialogButtonSizer()
 		self.m_sdbSizer1OK = wx.Button( self, wx.ID_OK )
@@ -151,7 +175,10 @@ class MainDialog ( wx.Dialog ):
 		m_sdbSizer1.AddButton( self.m_sdbSizer1Cancel )
 		m_sdbSizer1.Realize();
 		
-		bSizer2.Add( m_sdbSizer1, 0, wx.BOTTOM|wx.EXPAND, 5 )
+		bSizer5.Add( m_sdbSizer1, 0, wx.RIGHT|wx.EXPAND, 5 )
+		
+		
+		bSizer2.Add( bSizer5, 0, wx.EXPAND, 5 )
 		
 		
 		self.SetSizer( bSizer2 )
@@ -159,8 +186,20 @@ class MainDialog ( wx.Dialog ):
 		bSizer2.Fit( self )
 		
 		self.Centre( wx.BOTH )
+		
+		# Connect Events
+		self.chkNetFilter.Bind( wx.EVT_CHECKBOX, self.OnNetFilterCheckBox )
+		self.chkLayer.Bind( wx.EVT_CHECKBOX, self.OnLayerCheckBox )
 	
 	def __del__( self ):
 		pass
+	
+	
+	# Virtual event handlers, overide them in your derived class
+	def OnNetFilterCheckBox( self, event ):
+		event.Skip()
+	
+	def OnLayerCheckBox( self, event ):
+		event.Skip()
 	
 
