@@ -183,17 +183,21 @@ def getLeafVertices(pathList):
 
 # Rotate and Translate a list of vertices using a given angle and offset
 def transformVertices(vertexList, offset, angle):
-    return [ [ offset[0] + math.cos(angle) * vertex[0] - math.sin(angle) * vertex[1],
-               offset[1] + math.sin(angle) * vertex[0] + math.cos(angle) * vertex[1] ]
+    return [ [ round(offset[0] + math.cos(angle) * vertex[0] - math.sin(angle) * vertex[1]),
+               round(offset[1] + math.sin(angle) * vertex[0] + math.cos(angle) * vertex[1]) ]
            for vertex in vertexList]
 
 # Trims a polygon flush around the given vertices
-def trimFlushPolygonAtVertices(path, vertexList, vertexSlopes, extent):
-    trimRect = [ [0, -extent], [0, 0], [0, extent], [-extent, extent], [-extent, -extent] ]
-    trimPolys = [transformVertices(trimRect, vertexPos, vertexSlope)
+def trimFlushPolygonAtVertices(path, vertexList, vertexSlopes, radius):
+    trimPoly = [ [0, -radius], [0, 0], [0, radius], [-0.414*radius, radius], [-radius, 0.414*radius],
+                 [-radius, -0.414*radius], [-0.414*radius, -radius] ]
+    trimPolys = [transformVertices(trimPoly, vertexPos, vertexSlope)
         for vertexPos, vertexSlope in zip(vertexList, vertexSlopes)]
 
     trimPolys = unionPolygons(trimPolys)
+
+    verbose(trimPolys, isPaths=True, isClosed=True)
+
     return clipPolygonWithPolygons(path, trimPolys)
 
 
@@ -203,6 +207,9 @@ def generateViaFence(pathList, viaOffset, viaPitch, vFunc = lambda *args:None):
     global verboseFunc
     verboseFunc = vFunc
     viaPoints = []
+
+    # Remove zero length tracks
+    pathList = [track for track in pathList if getLineLength(track) > 0]
 
     # Expand the paths given as a parameter into one or more polygons
     # using the offset parameter
@@ -216,7 +223,7 @@ def generateViaFence(pathList, viaOffset, viaPitch, vFunc = lambda *args:None):
         # paths that envelop the original path
         localPathList = getPathsInsidePolygon(pathList, offsetPoly)
         leafVertexList, leafVertexAngles = getLeafVertices(localPathList)
-        offsetPoly = trimFlushPolygonAtVertices(offsetPoly, leafVertexList, leafVertexAngles, 1.5*viaOffset)[0]
+        offsetPoly = trimFlushPolygonAtVertices(offsetPoly, leafVertexList, leafVertexAngles, 1.1*viaOffset)[0]
         buttLineIdxList = getPathsThroughPoints(offsetPoly, leafVertexList)
         fencePaths = splitPathByPaths(offsetPoly, buttLineIdxList)
 

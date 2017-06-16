@@ -70,7 +70,7 @@ class ViaFenceAction(pcbnew.ActionPlugin):
         self.highlightedNetId = self.boardObj.GetHighLightNetCode()
         self.netMap = self.getNetMap()
         self.netFilterList = self.createNetFilterSuggestions()
-        self.netFilter = self.netMap[self.highlightedNetId].GetNetname() if self.highlightedNetId != -1 else netFilterList[0]
+        self.netFilter = self.netMap[self.highlightedNetId].GetNetname() if self.highlightedNetId != -1 else self.netFilterList[0]
         self.viaSize = self.boardDesignSettingsObj.GetCurrentViaSize()
         self.layerId = 0 #TODO: How to get currently selected layer?
         self.viaDrill = self.boardDesignSettingsObj.GetCurrentViaDrill()
@@ -99,7 +99,7 @@ class ViaFenceAction(pcbnew.ActionPlugin):
 
         if (mainDlg.ShowModal() == wx.ID_OK):
             self.netFilter = mainDlg.txtNetFilter.GetValue()
-            self.layerId = mainDlg.lstLayer.GetPosition()
+            self.layerId = mainDlg.lstLayer.GetSelection()
             self.viaOffset = pcbnew.FromMM(float(mainDlg.txtViaOffset.GetValue()))
             self.viaPitch = pcbnew.FromMM(float(mainDlg.txtViaPitch.GetValue()))
             self.viaDrill = pcbnew.FromMM(float(mainDlg.txtViaDrill.GetValue()))
@@ -109,8 +109,8 @@ class ViaFenceAction(pcbnew.ActionPlugin):
             self.isLayerChecked = mainDlg.chkLayer.GetValue()
             self.isIncludeLinesPolygonsChecked = mainDlg.chkIncludeLinesPolygons.GetValue()
 
-            # Assemble the track list
-            trackList = []
+            # Assemble a list of pcbnew.BOARD_ITEMs that support GetStart/GetEnd and IsOnLayer
+            trackObjects = []
 
             if (self.isNetFilterChecked):
                 # Escape the entire filter string. Unescape and remap specific characters that we want to allow
@@ -121,11 +121,24 @@ class ViaFenceAction(pcbnew.ActionPlugin):
                 # Find nets that match the generated regular expression and add their tracks to the list
                 for netId in self.netMap:
                     if re.match(netRegex, self.netMap[netId].GetNetname()):
-                        trackList += self.getNetTracks(netId)
+                        for trackObject in self.boardObj.TracksInNet(netId):
+                            trackObjects += [trackObject]
 
-                # TODO: Make a list of BOARD_ITEMS to filter them using GetLayer. Then convert to tracks?
+            if (self.isIncludeLinesPolygonsChecked):
+                # ... Add Lines and Polygons
+                pass
 
+            if (self.isLayerChecked):
+                # Filter by layer
+                # TODO: Make layer selection also a regex
+                print(self.layerId)
+                trackObjects = [trackObject for trackObject in trackObjects if trackObject.IsOnLayer(self.layerId)]
 
+            # Generate a track list from the board objects
+            trackList = [[ [trackObject.GetStart()[0], trackObject.GetStart()[1]],
+                           [trackObject.GetEnd()[0],   trackObject.GetEnd()[1]]   ]
+                           for trackObject in trackObjects]
+            print(trackList)
             viaPoints = generateViaFence(trackList, self.viaOffset, self.viaPitch)
 
             import numpy as np
