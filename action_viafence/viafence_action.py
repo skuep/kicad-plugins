@@ -1,9 +1,8 @@
 # Implementation of the action plugin derived from pcbnew.ActionPlugin
 import pcbnew
-import matplotlib.pyplot as plt
-import numpy as np
 import os
 import sys
+import re
 from collections import OrderedDict
 from .viafence import *
 from .viafence_dialogs import *
@@ -38,9 +37,26 @@ class ViaFenceAction(pcbnew.ActionPlugin):
         netMap.pop(0) # TODO: What is Net 0?
         return netMap
 
-    def createNetFilterList(self):
-        # TODO Generate Wildcard object from differential traces
-        netFilterList = ['*'] + [self.netMap[item].GetNetname() for item in self.netMap]
+    def getNetTracks(self, netId):
+        netTracks = self.boardObj.TracksInNet(netId)
+        return [ [[t.GetStart()[0], t.GetStart()[1]], [t.GetEnd()[0], t.GetEnd()[1]]] for t in netTracks ]
+
+    def createNetFilterSuggestions(self):
+        netList = [self.netMap[item].GetNetname() for item in self.netMap]
+        netFilterList = ['*']
+        diffMap = {'+': '-', 'P': 'N', '-': '+', 'N': 'P'}
+        regexMap = {'+': '[+-]', '-': '[+-]', 'P': '[PN]', 'N': '[PN]'}
+        invertDiffNet = lambda netName : netName[0:-1] + diffMap[netName[-1]]
+        isDiffNet = lambda netName : True if netName[-1] in diffMap.keys() else False
+
+        # Translate board nets into a filter list
+        for netName in netList:
+            if isDiffNet(netName) and invertDiffNet(netName) in netList:
+                # If we have a +/- or P/N pair, we insert a regex entry once into the filter list
+                filterText = netName[0:-1] + regexMap[netName[-1]]
+                if (filterText not in netFilterList): netFilterList += [filterText] 
+
+            netFilterList += [netName]
 
         return netFilterList
 
@@ -53,8 +69,8 @@ class ViaFenceAction(pcbnew.ActionPlugin):
         self.layerTable = self.getLayerTable()
         self.highlightedNetId = self.boardObj.GetHighLightNetCode()
         self.netMap = self.getNetMap()
-        self.netFilterList = self.createNetFilterList()
-        self.netFilter = self.netMap[self.highlightedNetId].GetNetname() if self.highlightedNetId != -1 else self.netFilterList[0]
+        self.netFilterList = self.createNetFilterSuggestions()
+        self.netFilter = self.netMap[self.highlightedNetId].GetNetname() if self.highlightedNetId != -1 else netFilterList[0]
         self.viaSize = self.boardDesignSettingsObj.GetCurrentViaSize()
         self.layerId = 0 #TODO: How to get currently selected layer?
         self.viaDrill = self.boardDesignSettingsObj.GetCurrentViaDrill()
@@ -93,32 +109,42 @@ class ViaFenceAction(pcbnew.ActionPlugin):
             self.isLayerChecked = mainDlg.chkLayer.GetValue()
             self.isIncludeLinesPolygonsChecked = mainDlg.chkIncludeLinesPolygons.GetValue()
 
-            # TODO: Grab all the tracks according to dialog settings
+            # Assemble the track list
+            trackList = []
 
-            # TODO: Start Via Generation
+            if (self.isNetFilterChecked):
+                # Escape the entire filter string. Unescape and remap specific characters that we want to allow
+                subsTable = {r'\[':'[', r'\]':']', r'\*':'.*'}
+                netRegex = re.escape(self.netFilter)
+                for subsFrom, subsTo in subsTable.items(): netRegex = netRegex.replace(subsFrom, subsTo)
 
-            # TODO: Filter generated vias? (colliding vias, vias not in ground plane?)
+                # Find nets that match the generated regular expression and add their tracks to the list
+                for netId in self.netMap:
+                    if re.match(netRegex, self.netMap[netId].GetNetname()):
+                        trackList += self.getNetTracks(netId)
 
-#        if (netId != -1):
-#            netTracks = pcbObj.TracksInNet(netId)
-#            trackList = [ [[t.GetStart()[0], t.GetStart()[1]], [t.GetEnd()[0], t.GetEnd()[1]]] for t in netTracks ]
-
-
-#            viaPoints = generateViaFence(trackList, viaOffset, viaPitch)
-
-
-#            for track in trackList:
-#                plt.plot(np.array(track).T[0], np.array(track).T[1], linewidth=1)
-#            for via in viaPoints:
-#                plt.plot(via[0], via[1], 'o', markersize=10)
+                # TODO: Make a list of BOARD_ITEMS to filter them using GetLayer. Then convert to tracks?
 
 
-#            plt.ylim(plt.ylim()[::-1])
-#            plt.axes().set_aspect('equal','box')
+            viaPoints = generateViaFence(trackList, self.viaOffset, self.viaPitch)
+
+            import numpy as np
+            import matplotlib.pyplot as plt
+
+            for track in trackList:
+                plt.plot(np.array(track).T[0], np.array(track).T[1], linewidth=2)
+            for via in viaPoints:
+                plt.plot(via[0], via[1], 'o', markersize=10)
+
+
+            plt.ylim(plt.ylim()[::-1])
+            plt.axes().set_aspect('equal','box')
         #    plt.xlim(0, 6000)
         #    plt.ylim(0, 8000)
-#            plt.show()
+            plt.show()
 
+
+            # TODO: Filter generated vias? (colliding vias, vias not in ground plane?)
 
 
         os.chdir(self.prevcwd)

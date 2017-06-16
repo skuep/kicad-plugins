@@ -101,13 +101,24 @@ class MainDialogBase ( wx.Dialog ):
 		
 		gSizer4 = wx.GridSizer( 3, 1, 0, 0 )
 		
-		fgSizer311 = wx.FlexGridSizer( 2, 2, 0, 10 )
+		fgSizer312 = wx.FlexGridSizer( 1, 2, 0, 10 )
+		fgSizer312.AddGrowableCol( 1 )
+		fgSizer312.SetFlexibleDirection( wx.HORIZONTAL )
+		fgSizer312.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+		
+		self.chkIncludeLinesPolygons = wx.CheckBox( sbSizer411.GetStaticBox(), wx.ID_ANY, u"Include Lines/Polygons", wx.DefaultPosition, wx.DefaultSize, 0 )
+		fgSizer312.Add( self.chkIncludeLinesPolygons, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL|wx.EXPAND, 5 )
+		
+		
+		gSizer4.Add( fgSizer312, 1, wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, 5 )
+		
+		fgSizer311 = wx.FlexGridSizer( 1, 2, 0, 10 )
 		fgSizer311.AddGrowableCol( 1 )
-		fgSizer311.SetFlexibleDirection( wx.BOTH )
+		fgSizer311.SetFlexibleDirection( wx.HORIZONTAL )
 		fgSizer311.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 		
 		self.chkNetFilter = wx.CheckBox( sbSizer411.GetStaticBox(), wx.ID_ANY, u"Net(s):", wx.DefaultPosition, wx.DefaultSize, 0 )
-		fgSizer311.Add( self.chkNetFilter, 1, wx.ALL|wx.EXPAND, 5 )
+		fgSizer311.Add( self.chkNetFilter, 0, wx.ALL|wx.EXPAND, 5 )
 		
 		txtNetFilterChoices = []
 		self.txtNetFilter = wx.ComboBox( sbSizer411.GetStaticBox(), wx.ID_ANY, u"Combo!", wx.DefaultPosition, wx.DefaultSize, txtNetFilterChoices, 0 )
@@ -116,11 +127,11 @@ class MainDialogBase ( wx.Dialog ):
 		fgSizer311.Add( self.txtNetFilter, 1, wx.ALL|wx.EXPAND, 5 )
 		
 		
-		gSizer4.Add( fgSizer311, 1, wx.EXPAND, 5 )
+		gSizer4.Add( fgSizer311, 1, wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, 5 )
 		
-		fgSizer31 = wx.FlexGridSizer( 2, 2, 0, 10 )
+		fgSizer31 = wx.FlexGridSizer( 1, 2, 0, 10 )
 		fgSizer31.AddGrowableCol( 1 )
-		fgSizer31.SetFlexibleDirection( wx.BOTH )
+		fgSizer31.SetFlexibleDirection( wx.HORIZONTAL )
 		fgSizer31.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 		
 		self.chkLayer = wx.CheckBox( sbSizer411.GetStaticBox(), wx.ID_ANY, u"Layer:", wx.DefaultPosition, wx.DefaultSize, 0 )
@@ -134,21 +145,10 @@ class MainDialogBase ( wx.Dialog ):
 		fgSizer31.Add( self.lstLayer, 1, wx.ALL|wx.EXPAND, 5 )
 		
 		
-		gSizer4.Add( fgSizer31, 1, wx.EXPAND, 5 )
-		
-		fgSizer312 = wx.FlexGridSizer( 2, 2, 0, 10 )
-		fgSizer312.AddGrowableCol( 1 )
-		fgSizer312.SetFlexibleDirection( wx.BOTH )
-		fgSizer312.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
-		
-		self.chkIncludeLinesPolygons = wx.CheckBox( sbSizer411.GetStaticBox(), wx.ID_ANY, u"Include Lines/Polygons", wx.DefaultPosition, wx.DefaultSize, 0 )
-		fgSizer312.Add( self.chkIncludeLinesPolygons, 1, wx.ALL|wx.EXPAND, 5 )
+		gSizer4.Add( fgSizer31, 1, wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, 5 )
 		
 		
-		gSizer4.Add( fgSizer312, 1, wx.EXPAND, 5 )
-		
-		
-		sbSizer411.Add( gSizer4, 1, wx.EXPAND, 5 )
+		sbSizer411.Add( gSizer4, 0, wx.EXPAND, 5 )
 		
 		
 		gbSizer4.Add( sbSizer411, wx.GBPosition( 1, 0 ), wx.GBSpan( 1, 1 ), wx.ALL|wx.EXPAND, 5 )
