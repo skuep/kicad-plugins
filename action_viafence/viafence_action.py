@@ -25,12 +25,13 @@ class ViaFenceAction(pcbnew.ActionPlugin):
         self.description = "Add a via fence to nets or tracks on the board"
 
 
-    def getLayerTable(self):
-        layerTable = []
+    def getLayerMap(self):
+        layerMap = [] #OrderedDict()
         for i in range(pcbnew.PCB_LAYER_ID_COUNT):
-            layerTable += [self.boardObj.GetLayerName(i)]
+            if self.boardObj.IsLayerEnabled(i):
+                layerMap += [[i, self.boardObj.GetLayerName(i)]]
 
-        return layerTable
+        return OrderedDict(layerMap)
 
     def getNetMap(self):
         netMap = OrderedDict(self.boardObj.GetNetsByNetcode())
@@ -66,7 +67,7 @@ class ViaFenceAction(pcbnew.ActionPlugin):
 
         self.boardObj = pcbnew.GetBoard()
         self.boardDesignSettingsObj = self.boardObj.GetDesignSettings()
-        self.layerTable = self.getLayerTable()
+        self.layerMap = self.getLayerMap()
         self.highlightedNetId = self.boardObj.GetHighLightNetCode()
         self.netMap = self.getNetMap()
         self.netFilterList = self.createNetFilterSuggestions()
@@ -75,14 +76,14 @@ class ViaFenceAction(pcbnew.ActionPlugin):
         self.layerId = 0 #TODO: How to get currently selected layer?
         self.viaDrill = self.boardDesignSettingsObj.GetCurrentViaDrill()
         self.viaPitch = pcbnew.FromMM(1)
-        self.viaOffset = pcbnew.FromMM(0.5)
+        self.viaOffset = pcbnew.FromMM(1)
         self.viaNet = "GND"
-        self.isNetFilterChecked = 1
+        self.isNetFilterChecked = 0
         self.isLayerChecked = 0
         self.isIncludeDrawingChecked = 0
 
         mainDlg = MainDialog(None)
-        mainDlg.lstLayer.SetItems(self.layerTable)
+        mainDlg.lstLayer.SetItems(self.layerMap.values())
         mainDlg.lstLayer.SetSelection(self.layerId)
         mainDlg.txtNetFilter.SetItems(self.netFilterList)
         mainDlg.txtNetFilter.SetSelection(self.netFilterList.index(self.netFilter))
@@ -99,7 +100,7 @@ class ViaFenceAction(pcbnew.ActionPlugin):
 
         if (mainDlg.ShowModal() == wx.ID_OK):
             self.netFilter = mainDlg.txtNetFilter.GetValue()
-            self.layerId = mainDlg.lstLayer.GetSelection()
+            self.layerId = self.layerMap.keys()[mainDlg.lstLayer.GetSelection()]
             self.viaOffset = pcbnew.FromMM(float(mainDlg.txtViaOffset.GetValue()))
             self.viaPitch = pcbnew.FromMM(float(mainDlg.txtViaPitch.GetValue()))
             self.viaDrill = pcbnew.FromMM(float(mainDlg.txtViaDrill.GetValue()))
