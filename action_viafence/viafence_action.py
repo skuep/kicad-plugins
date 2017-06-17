@@ -10,6 +10,9 @@ from .viafence_dialogs import *
 class MainDialog(MainDialogBase):
     def __init__(self, parent):
         MainDialogBase.__init__(self, parent)
+        self.bmpViafence.SetBitmap(wx.Bitmap( os.path.join(os.path.dirname(os.path.realpath(__file__)), "resources", "viafence.png") ) )
+        self.Layout()
+        self.GetSizer().Fit(self)
 
     def OnNetFilterCheckBox(self, event):
         self.txtNetFilter.Enable(event.IsChecked())
@@ -62,9 +65,6 @@ class ViaFenceAction(pcbnew.ActionPlugin):
         return netFilterList
 
     def Run(self):
-        self.prevcwd = os.getcwd()
-        os.chdir(os.path.dirname(os.path.realpath(__file__)))
-
         self.boardObj = pcbnew.GetBoard()
         self.boardDesignSettingsObj = self.boardObj.GetDesignSettings()
         self.layerMap = self.getLayerMap()
@@ -169,4 +169,3 @@ class ViaFenceAction(pcbnew.ActionPlugin):
             # TODO: Filter generated vias? (colliding vias, vias not in ground plane?)
 
 
-        os.chdir(self.prevcwd)

@@ -19,9 +19,9 @@ class MainDialogBase ( wx.Dialog ):
 	def __init__( self, parent ):
 		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = u"Via Fence Generator", pos = wx.DefaultPosition, size = wx.Size( -1,-1 ), style = wx.CAPTION|wx.CLOSE_BOX )
 		
-		self.SetSizeHintsSz( wx.Size( 400,450 ), wx.Size( 400,600 ) )
+		self.SetSizeHintsSz( wx.Size( -1,-1 ), wx.Size( 400,600 ) )
 		
-		bSizer2 = wx.BoxSizer( wx.VERTICAL )
+		mainSizer = wx.BoxSizer( wx.VERTICAL )
 		
 		gbSizer4 = wx.GridBagSizer( 0, 0 )
 		gbSizer4.SetFlexibleDirection( wx.BOTH )
@@ -82,17 +82,8 @@ class MainDialogBase ( wx.Dialog ):
 		
 		bSizer21 = wx.BoxSizer( wx.VERTICAL )
 		
-		self.m_panel11 = wx.Panel( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.SIMPLE_BORDER|wx.SUNKEN_BORDER|wx.TAB_TRAVERSAL )
-		bSizer24 = wx.BoxSizer( wx.VERTICAL )
-		
-		self.m_bitmap2 = wx.StaticBitmap( self.m_panel11, wx.ID_ANY, wx.Bitmap( u"resources/viafence.png", wx.BITMAP_TYPE_ANY ), wx.DefaultPosition, wx.DefaultSize, 0 )
-		bSizer24.Add( self.m_bitmap2, 1, wx.EXPAND, 0 )
-		
-		
-		self.m_panel11.SetSizer( bSizer24 )
-		self.m_panel11.Layout()
-		bSizer24.Fit( self.m_panel11 )
-		bSizer21.Add( self.m_panel11, 0, wx.EXPAND|wx.ALL, 5 )
+		self.bmpViafence = wx.StaticBitmap( self, wx.ID_ANY, wx.NullBitmap, wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer21.Add( self.bmpViafence, 1, wx.ALL|wx.EXPAND, 5 )
 		
 		
 		gbSizer4.Add( bSizer21, wx.GBPosition( 0, 1 ), wx.GBSpan( 1, 1 ), wx.EXPAND|wx.ALL, 5 )
@@ -101,16 +92,8 @@ class MainDialogBase ( wx.Dialog ):
 		
 		gSizer4 = wx.GridSizer( 3, 1, 0, 0 )
 		
-		fgSizer312 = wx.FlexGridSizer( 1, 2, 0, 10 )
-		fgSizer312.AddGrowableCol( 1 )
-		fgSizer312.SetFlexibleDirection( wx.HORIZONTAL )
-		fgSizer312.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
-		
 		self.chkIncludeDrawing = wx.CheckBox( sbSizer411.GetStaticBox(), wx.ID_ANY, u"Include Drawing Lines", wx.DefaultPosition, wx.DefaultSize, 0 )
-		fgSizer312.Add( self.chkIncludeDrawing, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL|wx.EXPAND, 5 )
-		
-		
-		gSizer4.Add( fgSizer312, 1, wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, 5 )
+		gSizer4.Add( self.chkIncludeDrawing, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL|wx.EXPAND, 5 )
 		
 		fgSizer311 = wx.FlexGridSizer( 1, 2, 0, 10 )
 		fgSizer311.AddGrowableCol( 1 )
@@ -156,7 +139,7 @@ class MainDialogBase ( wx.Dialog ):
 		
 		gbSizer4.AddGrowableCol( 0 )
 		
-		bSizer2.Add( gbSizer4, 1, wx.EXPAND, 5 )
+		mainSizer.Add( gbSizer4, 1, wx.EXPAND, 5 )
 		
 		bSizer5 = wx.BoxSizer( wx.HORIZONTAL )
 		
@@ -178,12 +161,12 @@ class MainDialogBase ( wx.Dialog ):
 		bSizer5.Add( m_sdbSizer1, 0, wx.RIGHT|wx.EXPAND, 5 )
 		
 		
-		bSizer2.Add( bSizer5, 0, wx.EXPAND, 5 )
+		mainSizer.Add( bSizer5, 0, wx.EXPAND, 5 )
 		
 		
-		self.SetSizer( bSizer2 )
+		self.SetSizer( mainSizer )
 		self.Layout()
-		bSizer2.Fit( self )
+		mainSizer.Fit( self )
 		
 		self.Centre( wx.BOTH )
 		
