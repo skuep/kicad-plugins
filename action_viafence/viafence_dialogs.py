@@ -106,8 +106,8 @@ class MainDialogBase ( wx.Dialog ):
 		fgSizer312.SetFlexibleDirection( wx.HORIZONTAL )
 		fgSizer312.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
 		
-		self.chkIncludeLinesPolygons = wx.CheckBox( sbSizer411.GetStaticBox(), wx.ID_ANY, u"Include Lines/Polygons", wx.DefaultPosition, wx.DefaultSize, 0 )
-		fgSizer312.Add( self.chkIncludeLinesPolygons, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL|wx.EXPAND, 5 )
+		self.chkIncludeDrawing = wx.CheckBox( sbSizer411.GetStaticBox(), wx.ID_ANY, u"Include Drawing Lines", wx.DefaultPosition, wx.DefaultSize, 0 )
+		fgSizer312.Add( self.chkIncludeDrawing, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL|wx.EXPAND, 5 )
 		
 		
 		gSizer4.Add( fgSizer312, 1, wx.EXPAND|wx.ALIGN_CENTER_VERTICAL, 5 )

@@ -79,7 +79,7 @@ class ViaFenceAction(pcbnew.ActionPlugin):
         self.viaNet = "GND"
         self.isNetFilterChecked = 1
         self.isLayerChecked = 0
-        self.isIncludeLinesPolygonsChecked = 0
+        self.isIncludeDrawingChecked = 0
 
         mainDlg = MainDialog(None)
         mainDlg.lstLayer.SetItems(self.layerTable)
@@ -95,7 +95,7 @@ class ViaFenceAction(pcbnew.ActionPlugin):
         mainDlg.txtNetFilter.Enable(self.isNetFilterChecked)
         mainDlg.chkLayer.SetValue(self.isLayerChecked)
         mainDlg.lstLayer.Enable(self.isLayerChecked)
-        mainDlg.chkIncludeLinesPolygons.SetValue(self.isIncludeLinesPolygonsChecked)
+        mainDlg.chkIncludeDrawing.SetValue(self.isIncludeDrawingChecked)
 
         if (mainDlg.ShowModal() == wx.ID_OK):
             self.netFilter = mainDlg.txtNetFilter.GetValue()
@@ -107,7 +107,7 @@ class ViaFenceAction(pcbnew.ActionPlugin):
             self.viaNet = mainDlg.txtViaNet.GetValue()
             self.isNetFilterChecked = mainDlg.chkNetFilter.GetValue()
             self.isLayerChecked = mainDlg.chkLayer.GetValue()
-            self.isIncludeLinesPolygonsChecked = mainDlg.chkIncludeLinesPolygons.GetValue()
+            self.isIncludeDrawingChecked = mainDlg.chkIncludeDrawing.GetValue()
 
             # Assemble a list of pcbnew.BOARD_ITEMs that support GetStart/GetEnd and IsOnLayer
             trackObjects = []
@@ -124,21 +124,29 @@ class ViaFenceAction(pcbnew.ActionPlugin):
                         for trackObject in self.boardObj.TracksInNet(netId):
                             trackObjects += [trackObject]
 
-            if (self.isIncludeLinesPolygonsChecked):
-                # ... Add Lines and Polygons
-                pass
+            if (self.isIncludeDrawingChecked):
+                boardItem = self.boardObj.GetDrawings().GetFirst()
+                while boardItem is not None:
+                    if pcbnew.DRAWSEGMENT.ClassOf(boardItem):
+                        # A drawing segment (not a text or something else)
+                        drawingObj = boardItem.Cast()
+                        if drawingObj.GetShape() == pcbnew.S_SEGMENT:
+                            # A straight line
+                            trackObjects += [drawingObj]
+
+                    boardItem = boardItem.Next()
+
 
             if (self.isLayerChecked):
                 # Filter by layer
                 # TODO: Make layer selection also a regex
-                print(self.layerId)
                 trackObjects = [trackObject for trackObject in trackObjects if trackObject.IsOnLayer(self.layerId)]
 
             # Generate a track list from the board objects
             trackList = [[ [trackObject.GetStart()[0], trackObject.GetStart()[1]],
                            [trackObject.GetEnd()[0],   trackObject.GetEnd()[1]]   ]
                            for trackObject in trackObjects]
-            print(trackList)
+
             viaPoints = generateViaFence(trackList, self.viaOffset, self.viaPitch)
 
             import numpy as np
