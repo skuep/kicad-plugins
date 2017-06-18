@@ -126,12 +126,12 @@ def expandPathsToPolygons(pathList, offset):
 def clipPolygonWithPolygons(path, clipPathList):
     pc = pyclipper.Pyclipper()
     pc.AddPath(path, pyclipper.PT_SUBJECT, True)
-    pc.AddPaths(clipPathList, pyclipper.PT_CLIP, True)
+    for clipPath in clipPathList: pc.AddPath(clipPath, pyclipper.PT_CLIP, True)
     return pc.Execute(pyclipper.CT_DIFFERENCE)
 
 def unionPolygons(pathList):
     pc = pyclipper.Pyclipper()
-    pc.AddPaths(pathList, pyclipper.PT_SUBJECT, True)
+    for path in pathList: pc.AddPath(path, pyclipper.PT_SUBJECT, True)
     return pc.Execute(pyclipper.CT_UNION, pyclipper.PFT_NONZERO)
 
 def isPointInPolygon(point, path):
