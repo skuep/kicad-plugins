@@ -3,6 +3,8 @@ import pcbnew
 import os
 import sys
 import re
+import time
+import json
 from collections import OrderedDict
 from .viafence import *
 from .viafence_dialogs import *
@@ -28,6 +30,16 @@ class ViaFenceAction(pcbnew.ActionPlugin):
         self.name = "Via Fence Generator"
         self.category = "Modify PCB"
         self.description = "Add a via fence to nets or tracks on the board"
+
+    def dumpJSON(self, file):
+        dict = {
+            'pathList': self.pathList, 
+            'viaOffset': self.viaOffset, 
+            'viaPitch': self.viaPitch, 
+            'viaPoints': self.viaPoints if hasattr(self, 'viaPoints') else []
+        }
+        with open(file, 'w') as file:
+            json.dump(dict, file, indent=4, sort_keys=True)
 
     # Return an ordered {layerId: layerName} dict of enabled layers
     def getLayerMap(self):
@@ -91,6 +103,7 @@ class ViaFenceAction(pcbnew.ActionPlugin):
         self.mainDlg.chkLayer.SetValue(self.isLayerChecked)
         self.mainDlg.lstLayer.Enable(self.isLayerChecked)
         self.mainDlg.chkIncludeDrawing.SetValue(self.isIncludeDrawingChecked)
+        self.mainDlg.chkDebugDump.SetValue(self.isDebugDumpChecked)
 
     def mainDialogToSelf(self):
         self.netFilter = self.mainDlg.txtNetFilter.GetValue()
@@ -103,11 +116,12 @@ class ViaFenceAction(pcbnew.ActionPlugin):
         self.isNetFilterChecked = self.mainDlg.chkNetFilter.GetValue()
         self.isLayerChecked = self.mainDlg.chkLayer.GetValue()
         self.isIncludeDrawingChecked = self.mainDlg.chkIncludeDrawing.GetValue()
-
+        self.isDebugDumpChecked = self.mainDlg.chkDebugDump.GetValue()
 
     def Run(self):
         self.boardObj = pcbnew.GetBoard()
         self.boardDesignSettingsObj = self.boardObj.GetDesignSettings()
+        self.boardPath = os.path.dirname(os.path.realpath(self.boardObj.GetFileName()))
         self.layerMap = self.getLayerMap()
         self.highlightedNetId = self.boardObj.GetHighLightNetCode()
         self.netMap = self.getNetMap()
@@ -122,6 +136,7 @@ class ViaFenceAction(pcbnew.ActionPlugin):
         self.isNetFilterChecked = 1 if self.highlightedNetId != -1 else 0
         self.isLayerChecked = 0
         self.isIncludeDrawingChecked = 0
+        self.isDebugDumpChecked = 0
         self.mainDlg = MainDialog(None)
         self.selfToMainDialog()
 
@@ -160,17 +175,20 @@ class ViaFenceAction(pcbnew.ActionPlugin):
                 lineObjects = [lineObject for lineObject in lineObjects if lineObject.IsOnLayer(self.layerId)]
 
             # Generate a path list from the pcbnew.BOARD_ITEM objects
-            pathList =  [[ [lineObject.GetStart()[0], lineObject.GetStart()[1]],
-                           [lineObject.GetEnd()[0],   lineObject.GetEnd()[1]]   ]
-                           for lineObject in lineObjects]
+            self.pathList =  [[ [lineObject.GetStart()[0], lineObject.GetStart()[1]],
+                                [lineObject.GetEnd()[0],   lineObject.GetEnd()[1]]   ]
+                                for lineObject in lineObjects]
+
+            if (self.isDebugDumpChecked):
+                self.dumpJSON(os.path.join(self.boardPath, time.strftime("viafence-%Y%m%d-%H%M%S.json")))
 
             # Generate via fence
-            viaPoints = generateViaFence(pathList, self.viaOffset, self.viaPitch)
+            viaPoints = generateViaFence(self.pathList, self.viaOffset, self.viaPitch)
 
             import numpy as np
             import matplotlib.pyplot as plt
 
-            for path in pathList:
+            for path in self.pathList:
                 plt.plot(np.array(path).T[0], np.array(path).T[1], linewidth=2)
             for via in viaPoints:
                 plt.plot(via[0], via[1], 'o', markersize=10)

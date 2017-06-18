@@ -143,10 +143,10 @@ class MainDialogBase ( wx.Dialog ):
 		
 		bSizer5 = wx.BoxSizer( wx.HORIZONTAL )
 		
-		self.btnSave = wx.Button( self, wx.ID_ANY, u"Save...", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.btnSave.Enable( False )
+		self.chkDebugDump = wx.CheckBox( self, wx.ID_ANY, u"Debug Dump", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.chkDebugDump.SetToolTipString( u"Creates a json file in the same directory as the opened board file containing the tracks and settings" )
 		
-		bSizer5.Add( self.btnSave, 0, wx.ALL, 5 )
+		bSizer5.Add( self.chkDebugDump, 0, wx.ALL|wx.EXPAND, 5 )
 		
 		
 		bSizer5.AddSpacer( ( 0, 0), 1, wx.EXPAND, 5 )
