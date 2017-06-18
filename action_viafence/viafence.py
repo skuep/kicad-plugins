@@ -15,7 +15,7 @@ def getLineSlope(line):
 def getLineLength(line):
     return math.hypot(line[0][0]-line[1][0], line[0][1]-line[1][1])
 
-# Returns a sub paths in a path with a path specification (startIdx, stopIdx)
+# Returns a sub path in a path with a path specification (startIdx, stopIdx)
 def getSubPath(path, pathSpec):
     listModulus = len(path)
     if (pathSpec[1] < pathSpec[0]): pathSpec[1] += listModulus
@@ -119,7 +119,7 @@ def expandPathsToPolygons(pathList, offset):
     # Use PyclipperOffset to generate polygons that surround the original
     # paths with a constant offset all around
     co = pyclipper.PyclipperOffset()
-    co.AddPaths(pathList, pyclipper.JT_ROUND, pyclipper.ET_OPENROUND)
+    for path in pathList: co.AddPath(path, pyclipper.JT_ROUND, pyclipper.ET_OPENROUND)
     return co.Execute(offset)
 
 # A small pyclipper wrapper to trim parts of a polygon using another polygon
