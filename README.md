@@ -1,5 +1,7 @@
 # action_viafence
-A via fencing plugin used to place fences of vias next to paths
+See [Example image](https://github.com/skuep/kicad-plugins/blob/master/action_viafence/tests/diffms.png).
+
+A via fencing plugin used to place fences of vias next to paths.
 Copy the folder into ~/kicad_plugins/ or create a symlink to the the action_viafence folder.
 
 The following libraries are required: pyclipper, wxPython, matplotlib and numpy (temporarily for visualization)
