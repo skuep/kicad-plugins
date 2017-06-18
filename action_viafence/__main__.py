@@ -46,21 +46,21 @@ def printTestResult(testName, refDict, testDict):
         testName, "PASSED" if compareTests(refDict, testDict) else "FAILED",
         len(refDict['viaPoints']), len(testDict['viaPoints']) ))
 
-def verbosePlot(object, isPaths, isClosed):
+def verbosePlot(object, isPoints = False, isPaths = False, isPolygons = False):
     import numpy as np
     import matplotlib.pyplot as plt
     for child in object:
         data = np.array(child)
-        if isClosed:
+        if isPolygons:
             plt.fill(data.T[0], data.T[1], facecolor='grey', alpha=0.3, linestyle='--', linewidth=1)
-        elif(isPaths):
+        elif isPaths:
             plt.plot(data.T[0], data.T[1], linestyle='-', linewidth=3)
-        else:
+        elif isPoints:
             plt.plot(data.T[0], data.T[1], linestyle='', marker='x', markersize=10, mew=3)
 
 def main():
     testDir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'tests')
-    verboseFunc = verbosePlot if args.verbose else lambda *args:None
+    verboseFunc = verbosePlot if args.verbose else lambda *args,**kwargs:None
 
     if (args.dialog):
         # Load and show dialog
