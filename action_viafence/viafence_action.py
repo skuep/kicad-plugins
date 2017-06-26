@@ -157,7 +157,7 @@ class ViaFenceAction(pcbnew.ActionPlugin):
 
             # Do we want to include drawing segments?
             if (self.isIncludeDrawingChecked):
-                boardItem = self.boardObj.GetDrawings().GetFirst()
+                boardItem = self.boardObj.DrawingsList().GetFirst()
                 while boardItem is not None:
                     if pcbnew.DRAWSEGMENT.ClassOf(boardItem):
                         # A drawing segment (not a text or something else)
