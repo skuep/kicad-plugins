@@ -73,6 +73,21 @@ class ViaFenceAction(pcbnew.ActionPlugin):
         for subsFrom, subsTo in subsTable.items(): regEx = regEx.replace(subsFrom, subsTo)
         return regEx
 
+    def createVias(self, viaPoints, viaDrill, viaSize, netCode):
+        newVias = []
+        for viaPoint in viaPoints:
+            newVia = pcbnew.VIA(self.boardObj)
+            self.boardObj.Add(newVia)
+
+            newVia.SetPosition(pcbnew.wxPoint(viaPoint[0], viaPoint[1]))
+            newVia.SetWidth(viaSize)
+            newVia.SetDrill(viaDrill)
+            newVia.SetViaType(pcbnew.VIA_THROUGH)
+            newVia.SetNetCode(netCode)
+            newVias += [newVia]
+
+        return newVias
+
     def selfToMainDialog(self):
         self.mainDlg.lstLayer.SetItems(self.layerMap.values())
         self.mainDlg.lstLayer.SetSelection(self.layerId)
@@ -89,6 +104,8 @@ class ViaFenceAction(pcbnew.ActionPlugin):
         self.mainDlg.lstLayer.Enable(self.isLayerChecked)
         self.mainDlg.chkIncludeDrawing.SetValue(self.isIncludeDrawingChecked)
         self.mainDlg.chkDebugDump.SetValue(self.isDebugDumpChecked)
+        self.mainDlg.chkRemoveViasWithClearanceViolation.SetValue(self.isRemoveViasWithClearanceViolationChecked)
+        self.mainDlg.chkSameNetZoneViasOnly.SetValue(self.isSameNetZoneViasOnlyChecked)
 
     def mainDialogToSelf(self):
         self.netFilter = self.mainDlg.txtNetFilter.GetValue()
@@ -102,6 +119,8 @@ class ViaFenceAction(pcbnew.ActionPlugin):
         self.isLayerChecked = self.mainDlg.chkLayer.GetValue()
         self.isIncludeDrawingChecked = self.mainDlg.chkIncludeDrawing.GetValue()
         self.isDebugDumpChecked = self.mainDlg.chkDebugDump.GetValue()
+        self.isSameNetZoneViasOnlyChecked = self.mainDlg.chkSameNetZoneViasOnly.GetValue()
+        self.isRemoveViasWithClearanceViolationChecked = self.mainDlg.chkRemoveViasWithClearanceViolation.GetValue()
 
     def Run(self):
         self.boardObj = pcbnew.GetBoard()
@@ -122,6 +141,9 @@ class ViaFenceAction(pcbnew.ActionPlugin):
         self.isLayerChecked = 0
         self.isIncludeDrawingChecked = 0
         self.isDebugDumpChecked = 0
+        self.isRemoveViasWithClearanceViolationChecked = 1
+        self.isSameNetZoneViasOnlyChecked = 0
+
         self.mainDlg = MainDialog(None)
         self.selfToMainDialog()
 
@@ -164,28 +186,44 @@ class ViaFenceAction(pcbnew.ActionPlugin):
                                 [lineObject.GetEnd()[0],   lineObject.GetEnd()[1]]   ]
                                 for lineObject in lineObjects]
 
+            # Generate via fence
+            try:
+                viaPoints = generateViaFence(self.pathList, self.viaOffset, self.viaPitch)
+            except:
+                viaPoints = []
+
             if (self.isDebugDumpChecked):
                 self.dumpJSON(os.path.join(self.boardPath, time.strftime("viafence-%Y%m%d-%H%M%S.json")))
 
-            # Generate via fence
-            viaPoints = generateViaFence(self.pathList, self.viaOffset, self.viaPitch)
+            viaObjList = self.createVias(viaPoints, self.viaDrill, self.viaSize, 0)
 
-            import numpy as np
-            import matplotlib.pyplot as plt
+# TODO: Implement
+#            if (self.isRemoveViasWithClearanceViolationChecked):
+#                # Remove Vias that violate clearance to other things
+#                # Check against other tracks
+#                for viaObj in viaObjList:
+#                    for track in self.boardObj.GetTracks():
+#                        clearance = track.GetClearance(viaObj)
+#                        if track.HitTest(False, clearance):
+#                            self.boardObj.RemoveNative(viaObj)
 
-            for path in self.pathList:
-                plt.plot(np.array(path).T[0], np.array(path).T[1], linewidth=2)
-            for via in viaPoints:
-                plt.plot(via[0], via[1], 'o', markersize=10)
+# TODO: Implement
+#            if (self.isSameNetZoneViasOnlyChecked):
+#                # Keep via only if it is in a filled zone with the same net
+
+#            import numpy as np
+#            import matplotlib.pyplot as plt
+
+#            for path in self.pathList:
+#                plt.plot(np.array(path).T[0], np.array(path).T[1], linewidth=2)
+#            for via in viaPoints:
+#                plt.plot(via[0], via[1], 'o', markersize=10)
 
 
-            plt.ylim(plt.ylim()[::-1])
-            plt.axes().set_aspect('equal','box')
-        #    plt.xlim(0, 6000)
-        #    plt.ylim(0, 8000)
-            plt.show()
+#            plt.ylim(plt.ylim()[::-1])
+#            plt.axes().set_aspect('equal','box')
+#            plt.show()
 
 
-            # TODO: Filter generated vias? (colliding vias, vias not in ground plane?)
 
 
