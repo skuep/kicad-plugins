@@ -64,7 +64,7 @@ def main():
 
     if (args.dialog):
         # Load and show dialog
-        os.chdir(os.path.dirname(os.path.realpath(__file__)))
+#        os.chdir(os.path.dirname(os.path.realpath(__file__)))
         app = wx.App()
         className = globals()[args.dialog]
         className(None).Show()
