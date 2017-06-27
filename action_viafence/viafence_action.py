@@ -97,7 +97,8 @@ class ViaFenceAction(pcbnew.ActionPlugin):
         self.mainDlg.txtViaPitch.SetValue(str(pcbnew.ToMM(self.viaPitch)))
         self.mainDlg.txtViaDrill.SetValue(str(pcbnew.ToMM(self.viaDrill)))
         self.mainDlg.txtViaSize.SetValue(str(pcbnew.ToMM(self.viaSize)))
-        self.mainDlg.txtViaNet.SetValue(self.viaNet)
+        self.mainDlg.lstViaNet.SetItems([item.GetNetname() for item in self.netMap.values()])
+        self.mainDlg.lstViaNet.SetSelection(0)
         self.mainDlg.chkNetFilter.SetValue(self.isNetFilterChecked)
         self.mainDlg.txtNetFilter.Enable(self.isNetFilterChecked)
         self.mainDlg.chkLayer.SetValue(self.isLayerChecked)
@@ -114,7 +115,7 @@ class ViaFenceAction(pcbnew.ActionPlugin):
         self.viaPitch = pcbnew.FromMM(float(self.mainDlg.txtViaPitch.GetValue()))
         self.viaDrill = pcbnew.FromMM(float(self.mainDlg.txtViaDrill.GetValue()))
         self.viaSize = pcbnew.FromMM(float(self.mainDlg.txtViaSize.GetValue()))
-        self.viaNet = self.mainDlg.txtViaNet.GetValue()
+        self.viaNetId = self.netMap.keys()[self.mainDlg.lstViaNet.GetSelection()]
         self.isNetFilterChecked = self.mainDlg.chkNetFilter.GetValue()
         self.isLayerChecked = self.mainDlg.chkLayer.GetValue()
         self.isIncludeDrawingChecked = self.mainDlg.chkIncludeDrawing.GetValue()
@@ -136,7 +137,7 @@ class ViaFenceAction(pcbnew.ActionPlugin):
         self.viaDrill = self.boardDesignSettingsObj.GetCurrentViaDrill()
         self.viaPitch = pcbnew.FromMM(1)
         self.viaOffset = pcbnew.FromMM(1)
-        self.viaNet = "GND"
+        self.viaNetId = 0 #TODO: Maybe a better init value here. Try to find "GND" maybe?
         self.isNetFilterChecked = 1 if self.highlightedNetId != -1 else 0
         self.isLayerChecked = 0
         self.isIncludeDrawingChecked = 0
@@ -195,7 +196,7 @@ class ViaFenceAction(pcbnew.ActionPlugin):
             if (self.isDebugDumpChecked):
                 self.dumpJSON(os.path.join(self.boardPath, time.strftime("viafence-%Y%m%d-%H%M%S.json")))
 
-            viaObjList = self.createVias(viaPoints, self.viaDrill, self.viaSize, 0)
+            viaObjList = self.createVias(viaPoints, self.viaDrill, self.viaSize, self.viaNetId)
 
 # TODO: Implement
 #            if (self.isRemoveViasWithClearanceViolationChecked):
