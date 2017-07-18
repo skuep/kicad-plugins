@@ -7,7 +7,7 @@ Copy the folder into ~/kicad_plugins/ or create a symlink to the the action_viaf
 The following libraries are required: pyclipper, wxPython, matplotlib and numpy (temporarily for visualization)
 
 You can access the plugin via pcbnew->Tools->External Plugins->Via Fence Generator. 
-It opens a dialog that lets you choose some options and where to get the input tracks from (nets, drawing lines). It then adds VIAs to your board file. However note that *currently*, no DRC check is made, so VIAs might end up on different-net objects, causing problems. 
+It opens a dialog that lets you choose some options and where to get the input tracks from (nets, drawing lines). It then adds VIAs to your board file. However note that *currently*, no DRC check is made, so VIAs might end up on different-net objects, causing DRC problems. 
 
 You can also run the plugin standalone by cd'ing into the parent folder (i.e. ~/kicad_plugins/) and run
 
