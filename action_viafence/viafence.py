@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 import math
-import pyclipper
+#import pyclipper
 from bisect import bisect_left
 
 def verbose(object, *args, **kwargs):
@@ -116,6 +116,7 @@ class PathInterpolator:
 
 # A small pyclipper wrapper class to expand a line to a polygon with a given offset
 def expandPathsToPolygons(pathList, offset):
+    import pyclipper
     # Use PyclipperOffset to generate polygons that surround the original
     # paths with a constant offset all around
     co = pyclipper.PyclipperOffset()
@@ -124,17 +125,20 @@ def expandPathsToPolygons(pathList, offset):
 
 # A small pyclipper wrapper to trim parts of a polygon using another polygon
 def clipPolygonWithPolygons(path, clipPathList):
+    import pyclipper
     pc = pyclipper.Pyclipper()
     pc.AddPath(path, pyclipper.PT_SUBJECT, True)
     for clipPath in clipPathList: pc.AddPath(clipPath, pyclipper.PT_CLIP, True)
     return pc.Execute(pyclipper.CT_DIFFERENCE)
 
 def unionPolygons(pathList):
+    import pyclipper
     pc = pyclipper.Pyclipper()
     for path in pathList: pc.AddPath(path, pyclipper.PT_SUBJECT, True)
     return pc.Execute(pyclipper.CT_UNION, pyclipper.PFT_NONZERO)
 
 def isPointInPolygon(point, path):
+    import pyclipper
     return True if (pyclipper.PointInPolygon(point, path) == 1) else False
 
 def getPathsInsidePolygon(pathList, polygon):
