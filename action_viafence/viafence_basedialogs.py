@@ -17,7 +17,7 @@ import wx.xrc
 class MainDialogBase ( wx.Dialog ):
 
 	def __init__( self, parent ):
-		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = u"Via Fence Generator", pos = wx.DefaultPosition, size = wx.Size( -1,-1 ), style = wx.CAPTION|wx.CLOSE_BOX )
+		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = u"Via Fence Generator", pos = wx.DefaultPosition, size = wx.Size( 503,567 ), style = wx.CAPTION|wx.CLOSE_BOX )
 
 		import sys #maui
 		if sys.version_info[0] == 2:
@@ -107,6 +107,10 @@ class MainDialogBase ( wx.Dialog ):
 
 		gSizer4 = wx.GridSizer( 3, 1, 0, 0 )
 
+		self.chkIncludeSelection = wx.CheckBox( sbSizer411.GetStaticBox(), wx.ID_ANY, u"Include Selected", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.chkIncludeSelection.SetValue(True)
+		gSizer4.Add( self.chkIncludeSelection, 0, wx.ALL, 5 )
+
 		self.chkIncludeDrawing = wx.CheckBox( sbSizer411.GetStaticBox(), wx.ID_ANY, u"Include Drawing Lines", wx.DefaultPosition, wx.DefaultSize, 0 )
 		gSizer4.Add( self.chkIncludeDrawing, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL|wx.EXPAND, 5 )
 
@@ -176,9 +180,11 @@ class MainDialogBase ( wx.Dialog ):
 
 		self.chkDebugDump = wx.CheckBox( self, wx.ID_ANY, u"Debug Dump", wx.DefaultPosition, wx.DefaultSize, 0 )
 		#maui
-		if sys.version_info[0] > 2:
+		if sys.version_info[0] == 2:
+			self.chkDebugDump.SetToolTipString( u"Creates a json file in the same directory as the opened board file containing the tracks and settings" )
+		else:
 			self.chkDebugDump.SetToolTip( u"Creates a json file in the same directory as the opened board file containing the tracks and settings" )
-
+		
 		bSizer5.Add( self.chkDebugDump, 0, wx.ALL|wx.EXPAND, 5 )
 
 
@@ -199,7 +205,6 @@ class MainDialogBase ( wx.Dialog ):
 
 		self.SetSizer( mainSizer )
 		self.Layout()
-		mainSizer.Fit( self )
 
 		self.Centre( wx.BOTH )
 

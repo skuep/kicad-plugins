@@ -108,12 +108,20 @@ class ViaFenceAction(pcbnew.ActionPlugin):
         self.mainDlg.txtViaDrill.SetValue(str(pcbnew.ToMM(self.viaDrill)))
         self.mainDlg.txtViaSize.SetValue(str(pcbnew.ToMM(self.viaSize)))
         self.mainDlg.lstViaNet.SetItems([item.GetNetname() for item in self.netMap.values()])
-        self.mainDlg.lstViaNet.SetSelection(0)
+        #self.mainDlg.lstViaNet.SetSelection(0)
+        for i, item  in enumerate (self.netMap.values()):
+            #wx.LogMessage(self.mainDlg.lstViaNet.GetString(i))
+            if self.mainDlg.lstViaNet.GetString(i) in ["GND", "/GND"]:
+                #wx.LogMessage('GND '+str(i))
+                self.mainDlg.lstViaNet.SetSelection(i)
+                break
+        #self.mainDlg.lstViaNet.SetSelection(0)
         self.mainDlg.chkNetFilter.SetValue(self.isNetFilterChecked)
         self.mainDlg.txtNetFilter.Enable(self.isNetFilterChecked)
         self.mainDlg.chkLayer.SetValue(self.isLayerChecked)
         self.mainDlg.lstLayer.Enable(self.isLayerChecked)
         self.mainDlg.chkIncludeDrawing.SetValue(self.isIncludeDrawingChecked)
+        self.mainDlg.chkIncludeSelection.SetValue(self.isIncludeSelectionChecked)
         self.mainDlg.chkDebugDump.SetValue(self.isDebugDumpChecked)
         self.mainDlg.chkRemoveViasWithClearanceViolation.SetValue(self.isRemoveViasWithClearanceViolationChecked)
         self.mainDlg.chkSameNetZoneViasOnly.SetValue(self.isSameNetZoneViasOnlyChecked)
@@ -129,6 +137,7 @@ class ViaFenceAction(pcbnew.ActionPlugin):
         self.isNetFilterChecked = self.mainDlg.chkNetFilter.GetValue()
         self.isLayerChecked = self.mainDlg.chkLayer.GetValue()
         self.isIncludeDrawingChecked = self.mainDlg.chkIncludeDrawing.GetValue()
+        self.isIncludeSelectionChecked = self.mainDlg.chkIncludeSelection.GetValue()
         self.isDebugDumpChecked = self.mainDlg.chkDebugDump.GetValue()
         self.isSameNetZoneViasOnlyChecked = self.mainDlg.chkSameNetZoneViasOnly.GetValue()
         self.isRemoveViasWithClearanceViolationChecked = self.mainDlg.chkRemoveViasWithClearanceViolation.GetValue()
@@ -160,6 +169,7 @@ class ViaFenceAction(pcbnew.ActionPlugin):
             self.isNetFilterChecked = 1 if self.highlightedNetId != -1 else 0
             self.isLayerChecked = 0
             self.isIncludeDrawingChecked = 0
+            self.isIncludeSelectionChecked = 1
             self.isDebugDumpChecked = 0
             self.isRemoveViasWithClearanceViolationChecked = 1
             self.isSameNetZoneViasOnlyChecked = 0
@@ -194,7 +204,15 @@ class ViaFenceAction(pcbnew.ActionPlugin):
                                 lineObjects += [drawingObject]
     
                         boardItem = boardItem.Next()
-    
+                
+                # Do we want to include track segments?
+                if (self.isIncludeSelectionChecked):
+                    #wx.LogMessage('Here'+str(self.isIncludeSelectionChecked))
+                    for item in self.boardObj.GetTracks():
+                        if type(item) is pcbnew.TRACK and item.IsSelected():
+                            lineObjects += [item]
+                    #wx.LogMessage(str(len(tracks)))
+
                 # Do we want to filter the generated lines by layer?
                 if (self.isLayerChecked):
                     # Filter by layer

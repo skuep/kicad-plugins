@@ -12,11 +12,11 @@
    version="1.1"
    id="svg2"
    inkscape:version="0.92.3 (2405546, 2018-03-11)"
-   sodipodi:docname="fencing-vias.svg"
+   sodipodi:docname="shielding-vias.svg"
    viewBox="0 0 26 26"
-   inkscape:export-filename="/home/mau/.kicad_plugins/action_viafence/resources/fencing-vias.png"
-   inkscape:export-xdpi="110.77"
-   inkscape:export-ydpi="110.77">
+   inkscape:export-filename="C:\Users\userC\AppData\Roaming\kicad\scripting\plugins\via_fence_generator\shielding-vias.png"
+   inkscape:export-xdpi="99.096771"
+   inkscape:export-ydpi="99.096771">
   <metadata
      id="metadata40">
     <rdf:RDF>
@@ -38,17 +38,17 @@
      guidetolerance="10"
      inkscape:pageopacity="0"
      inkscape:pageshadow="2"
-     inkscape:window-width="1600"
-     inkscape:window-height="824"
+     inkscape:window-width="2560"
+     inkscape:window-height="1361"
      id="namedview38"
      showgrid="true"
      inkscape:snap-to-guides="false"
      inkscape:snap-grids="true"
      inkscape:zoom="14.553175"
-     inkscape:cx="-8.8463924"
+     inkscape:cx="10.66825"
      inkscape:cy="11.459509"
-     inkscape:window-x="0"
-     inkscape:window-y="0"
+     inkscape:window-x="-9"
+     inkscape:window-y="-9"
      inkscape:window-maximized="1"
      inkscape:current-layer="svg2"
      showguides="true"
@@ -91,7 +91,7 @@
     </filter>
   </defs>
   <rect
-     style="fill:#800080;fill-opacity:1;stroke:none;stroke-width:0.9375;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:1.99997282;stroke-opacity:1"
+     style="fill:#006400;fill-opacity:1;stroke:none;stroke-width:0.9375;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:1.99997282;stroke-opacity:1"
      id="rect4495"
      width="26"
      height="26"
@@ -195,10 +195,10 @@
        d="m 22,18 c 0,1.932997 -1.567003,3.5 -3.5,3.5 -1.932997,0 -3.5,-1.567003 -3.5,-3.5 0,-1.932997 1.567003,-3.5 3.5,-3.5 1.932997,0 3.5,1.567003 3.5,3.5 z" />
   </g>
   <rect
-     style="opacity:0.25;fill:#ffaaaa;fill-opacity:1;stroke:#b3b3b3;stroke-width:2.24165964;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:1.99997282;stroke-opacity:1"
+     style="opacity:0.25;fill:#ffffff;fill-opacity:0.85398233;stroke:#b3b3b3;stroke-width:2.30681324;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:1.99997282;stroke-opacity:1"
      id="rect4737"
-     width="26"
-     height="26"
-     x="-0.00085256767"
-     y="1.7193647e-08" />
+     width="26.755686"
+     height="26.755686"
+     x="-0.37869588"
+     y="-0.37784326" />
 </svg>
