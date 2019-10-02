@@ -243,7 +243,8 @@ def generateViaFence(pathList, viaOffset, viaPitch, vFunc = lambda *args,**kwarg
             # line by more than 10 degrees so we find all non-arc edges
             # We combine these points with the start and end point of the path and use
             # them to place fixed vias on their positions
-            fixPointIdxList = [0] + getPathVertices(fencePath, 10) + [-1]
+            tolerance_degree = 10
+            fixPointIdxList = [0] + getPathVertices(fencePath, tolerance_degree) + [-1]
             fixPointList = [fencePath[idx] for idx in fixPointIdxList]
             verbose(fixPointList, isPoints=True)
 
