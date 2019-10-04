@@ -116,14 +116,12 @@ class ViaFenceAction(pcbnew.ActionPlugin):
 
     def mainDialogToSelf(self):
         self.netFilter = self.mainDlg.txtNetFilter.GetValue()
-        if len(list(self.layerMap.keys())) > 0:
-            self.layerId = list(self.layerMap.keys())[self.mainDlg.lstLayer.GetSelection()]   #maui
+        self.layerId = list(self.layerMap.keys())[self.mainDlg.lstLayer.GetSelection()]   #maui
         self.viaOffset = pcbnew.FromMM(float(self.mainDlg.txtViaOffset.GetValue()))
         self.viaPitch = pcbnew.FromMM(float(self.mainDlg.txtViaPitch.GetValue()))
         self.viaDrill = pcbnew.FromMM(float(self.mainDlg.txtViaDrill.GetValue()))
         self.viaSize = pcbnew.FromMM(float(self.mainDlg.txtViaSize.GetValue()))
-        if len(list(self.netMap.keys())) > 0:
-            self.viaNetId = list(self.netMap.keys())[self.mainDlg.lstViaNet.GetSelection()]   #maui
+        self.viaNetId = list(self.netMap.keys())[self.mainDlg.lstViaNet.GetSelection()]   #maui
         self.isNetFilterChecked = self.mainDlg.chkNetFilter.GetValue()
         self.isLayerChecked = self.mainDlg.chkLayer.GetValue()
         self.isIncludeDrawingChecked = self.mainDlg.chkIncludeDrawing.GetValue()
