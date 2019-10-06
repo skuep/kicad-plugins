@@ -165,6 +165,8 @@ class MainDialogBase ( wx.Dialog ):
 		self.chkRemoveViasWithClearanceViolation = wx.CheckBox( sbSizer4.GetStaticBox(), wx.ID_ANY, u"Remove VIAs violating \nclearance rules", wx.DefaultPosition, wx.DefaultSize, 0 )
 		gSizer2.Add( self.chkRemoveViasWithClearanceViolation, 1, wx.ALIGN_CENTER_VERTICAL|wx.EXPAND|wx.RIGHT|wx.LEFT, 5 )
 
+		self.m_buttonDelete = wx.Button( sbSizer4.GetStaticBox(), wx.ID_ANY, u"Delete Vias", wx.DefaultPosition, wx.DefaultSize, 0 )
+		gSizer2.Add( self.m_buttonDelete, 0, wx.ALIGN_CENTER|wx.ALL, 5 )
 
 		sbSizer4.Add( gSizer2, 1, wx.EXPAND, 5 )
 

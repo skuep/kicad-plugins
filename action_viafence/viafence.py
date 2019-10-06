@@ -2,6 +2,8 @@
 import math
 #import pyclipper
 from bisect import bisect_left
+import wx
+import pcbnew
 
 def verbose(object, *args, **kwargs):
     global verboseFunc
@@ -193,8 +195,9 @@ def transformVertices(vertexList, offset, angle):
 
 # Trims a polygon flush around the given vertices
 def trimFlushPolygonAtVertices(path, vertexList, vertexSlopes, radius):
-    trimPoly = [ [0, -radius], [0, 0], [0, radius], [-0.414*radius, radius], [-radius, 0.414*radius],
-                 [-radius, -0.414*radius], [-0.414*radius, -radius] ]
+    const = 0.414
+    trimPoly = [ [0, -radius], [0, 0], [0, radius], [-const*radius, radius], [-radius, const*radius],
+                 [-radius, -const*radius], [-const*radius, -radius] ]
     trimPolys = [transformVertices(trimPoly, vertexPos, vertexSlope)
         for vertexPos, vertexSlope in zip(vertexList, vertexSlopes)]
 
@@ -203,8 +206,6 @@ def trimFlushPolygonAtVertices(path, vertexList, vertexSlopes, radius):
     verbose(trimPolys, isPolygons=True)
 
     return clipPolygonWithPolygons(path, trimPolys)
-
-
 
 ######################
 def generateViaFence(pathList, viaOffset, viaPitch, vFunc = lambda *args,**kwargs:None):
