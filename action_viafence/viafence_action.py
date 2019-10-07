@@ -124,10 +124,10 @@ class ViaFenceAction(pcbnew.ActionPlugin):
         self.netFilter = self.mainDlg.txtNetFilter.GetValue()
         if len(list(self.layerMap.keys())) > 0:
             self.layerId = list(self.layerMap.keys())[self.mainDlg.lstLayer.GetSelection()]   #maui
-        self.viaOffset = pcbnew.FromMM(float(self.mainDlg.txtViaOffset.GetValue()))
-        self.viaPitch = pcbnew.FromMM(float(self.mainDlg.txtViaPitch.GetValue()))
-        self.viaDrill = pcbnew.FromMM(float(self.mainDlg.txtViaDrill.GetValue()))
-        self.viaSize = pcbnew.FromMM(float(self.mainDlg.txtViaSize.GetValue()))
+        self.viaOffset = pcbnew.FromMM(float(self.mainDlg.txtViaOffset.GetValue().replace(',','.')))
+        self.viaPitch = pcbnew.FromMM(float(self.mainDlg.txtViaPitch.GetValue().replace(',','.')))
+        self.viaDrill = pcbnew.FromMM(float(self.mainDlg.txtViaDrill.GetValue().replace(',','.')))
+        self.viaSize = pcbnew.FromMM(float(self.mainDlg.txtViaSize.GetValue().replace(',','.')))
         if len(list(self.netMap.keys())) > 0:
             self.viaNetId = list(self.netMap.keys())[self.mainDlg.lstViaNet.GetSelection()]   #maui
         self.isNetFilterChecked = self.mainDlg.chkNetFilter.GetValue()
