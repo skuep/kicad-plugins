@@ -1,3 +1,9 @@
+## Attention: This Repository is outdated
+The content has been merged into [RF-tools-KiCAD by easyw](https://github.com/easyw/RF-tools-KiCAD) for further development. 
+
+This repository serves as an archive only.
+
+
 # action_viafence
 See [Example image](https://github.com/skuep/kicad-plugins/blob/master/action_viafence/tests/simple-test.png).
 
