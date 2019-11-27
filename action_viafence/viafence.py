@@ -1,7 +1,9 @@
 #!/usr/bin/env python2
 import math
-import pyclipper
+#import pyclipper
 from bisect import bisect_left
+import wx
+import pcbnew
 
 def verbose(object, *args, **kwargs):
     global verboseFunc
@@ -116,6 +118,7 @@ class PathInterpolator:
 
 # A small pyclipper wrapper class to expand a line to a polygon with a given offset
 def expandPathsToPolygons(pathList, offset):
+    import pyclipper
     # Use PyclipperOffset to generate polygons that surround the original
     # paths with a constant offset all around
     co = pyclipper.PyclipperOffset()
@@ -124,17 +127,20 @@ def expandPathsToPolygons(pathList, offset):
 
 # A small pyclipper wrapper to trim parts of a polygon using another polygon
 def clipPolygonWithPolygons(path, clipPathList):
+    import pyclipper
     pc = pyclipper.Pyclipper()
     pc.AddPath(path, pyclipper.PT_SUBJECT, True)
     for clipPath in clipPathList: pc.AddPath(clipPath, pyclipper.PT_CLIP, True)
     return pc.Execute(pyclipper.CT_DIFFERENCE)
 
 def unionPolygons(pathList):
+    import pyclipper
     pc = pyclipper.Pyclipper()
     for path in pathList: pc.AddPath(path, pyclipper.PT_SUBJECT, True)
     return pc.Execute(pyclipper.CT_UNION, pyclipper.PFT_NONZERO)
 
 def isPointInPolygon(point, path):
+    import pyclipper
     return True if (pyclipper.PointInPolygon(point, path) == 1) else False
 
 def getPathsInsidePolygon(pathList, polygon):
@@ -189,8 +195,9 @@ def transformVertices(vertexList, offset, angle):
 
 # Trims a polygon flush around the given vertices
 def trimFlushPolygonAtVertices(path, vertexList, vertexSlopes, radius):
-    trimPoly = [ [0, -radius], [0, 0], [0, radius], [-0.414*radius, radius], [-radius, 0.414*radius],
-                 [-radius, -0.414*radius], [-0.414*radius, -radius] ]
+    const = 0.414
+    trimPoly = [ [0, -radius], [0, 0], [0, radius], [-const*radius, radius], [-radius, const*radius],
+                 [-radius, -const*radius], [-const*radius, -radius] ]
     trimPolys = [transformVertices(trimPoly, vertexPos, vertexSlope)
         for vertexPos, vertexSlope in zip(vertexList, vertexSlopes)]
 
@@ -199,8 +206,6 @@ def trimFlushPolygonAtVertices(path, vertexList, vertexSlopes, radius):
     verbose(trimPolys, isPolygons=True)
 
     return clipPolygonWithPolygons(path, trimPolys)
-
-
 
 ######################
 def generateViaFence(pathList, viaOffset, viaPitch, vFunc = lambda *args,**kwargs:None):
@@ -239,7 +244,8 @@ def generateViaFence(pathList, viaOffset, viaPitch, vFunc = lambda *args,**kwarg
             # line by more than 10 degrees so we find all non-arc edges
             # We combine these points with the start and end point of the path and use
             # them to place fixed vias on their positions
-            fixPointIdxList = [0] + getPathVertices(fencePath, 10) + [-1]
+            tolerance_degree = 10
+            fixPointIdxList = [0] + getPathVertices(fencePath, tolerance_degree) + [-1]
             fixPointList = [fencePath[idx] for idx in fixPointIdxList]
             verbose(fixPointList, isPoints=True)
 
